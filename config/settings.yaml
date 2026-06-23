@@ -1,0 +1,28 @@
+# Traffic Enforcement System — Configuration
+# Modify these values to suit your deployment.
+
+speed_limit: 60.0              # km/h
+evidence_dir: "evidence"
+model_path: "yolov8n.pt"       # YOLOv8 model weights (auto-downloaded on first run)
+
+# Speed detection
+pixels_per_meter: 8.0          # Calibrate for your camera setup
+speed_calc_interval: 5
+
+# Honk detection
+audio_sample_rate: 16000
+honk_threshold_db: 85.0
+audio_chunk_size: 1024
+
+# Drowsiness / Drunk detection
+ear_threshold: 0.25
+ear_consec_frames: 20
+head_tilt_threshold: 15.0
+
+# Tracking
+tracker_max_age: 30
+tracker_min_hits: 3
+
+# Display
+display_width: 1280
+display_height: 720
