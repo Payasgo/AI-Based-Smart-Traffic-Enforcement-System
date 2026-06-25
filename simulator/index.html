@@ -2,140 +2,368 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AI Traffic Enforcement — Simulator</title>
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>AI Traffic Enforcement — Live Simulator</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#0b1520;--s1:#111d2a;--s2:#182535;--border:#22364a;
-  --text:#dde8f0;--muted:#6a8fa8;--hint:#3d5a70;
-  --green:#1a9065;--red:#d63f3f;--amber:#c47e10;--blue:#2e73c2;--purple:#6a60cc;
-  --font:'Segoe UI',system-ui,sans-serif;--mono:'Cascadia Code','Consolas',monospace;
+  --bg:#04090f;--p1:#080f18;--p2:#0d1822;--p3:#12202e;
+  --border:#182535;--border2:#1e3045;
+  --text:#b8cedd;--muted:#4a6d88;--dim:#1e3248;
+  --green:#0faa60;--red:#cc3030;--amber:#b87008;--blue:#1a6ab8;--cyan:#0898b0;--purple:#6058b8;
+  --font:'Segoe UI',system-ui,sans-serif;--mono:'Consolas','Cascadia Code',monospace;
 }
-body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;padding:14px 16px}
-h1{font-size:11px;font-weight:500;color:var(--hint);letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:8px}
-h1::after{content:'';flex:1;height:1px;background:var(--border)}
-.grid{display:grid;grid-template-columns:1fr 250px;gap:10px;margin-bottom:10px}
-.road-wrap{background:var(--s1);border:1px solid var(--border);border-radius:10px;overflow:hidden;position:relative}
-canvas{display:block;width:100%}
-#flash{position:absolute;inset:0;pointer-events:none;opacity:0;background:rgba(214,63,63,.1);transition:opacity .1s}
-.cam-bar{position:absolute;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:center;padding:5px 10px;background:rgba(0,0,0,.6)}
-.cam-id{font-size:9px;font-family:var(--mono);color:rgba(255,255,255,.4);letter-spacing:.08em}
-.rec{display:flex;align-items:center;gap:5px;font-size:9px;font-family:var(--mono);color:rgba(255,255,255,.4)}
-.recdot{width:6px;height:6px;border-radius:50%;background:#d63f3f;animation:bl 1.4s infinite}
-@keyframes bl{0%,100%{opacity:1}50%{opacity:.15}}
-.sidebar{display:flex;flex-direction:column;gap:8px}
-.panel{background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:12px}
-.ptitle{font-size:9px;font-weight:600;color:var(--hint);text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px}
-.stats{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:0}
-.stat{background:var(--s2);border-radius:6px;padding:8px 10px}
-.sn{font-size:9px;color:var(--hint);margin-bottom:3px}
-.sv{font-size:20px;font-weight:600}
-.sv.r{color:var(--red)}.sv.a{color:var(--amber)}.sv.g{color:var(--green)}
-.drow{display:flex;align-items:center;gap:7px;padding:5px 8px;border-radius:5px;background:var(--s2);margin-bottom:5px}
-.drow:last-child{margin-bottom:0}
-.dd{width:7px;height:7px;border-radius:50%;background:var(--hint);flex-shrink:0;transition:background .2s}
-.dd.on{background:var(--green)}.dd.fire{background:var(--red);animation:bl .5s infinite}
-.dn{font-size:11px;color:var(--muted);flex:1}
-.dv{font-size:10px;font-family:var(--mono);color:var(--hint)}
-.cr{display:flex;align-items:center;gap:8px;margin-bottom:8px}
-.cr label{font-size:11px;color:var(--muted);width:76px;flex-shrink:0}
-.cr input[type=range]{flex:1;height:3px;accent-color:var(--blue);cursor:pointer}
-.cv{font-size:11px;font-weight:500;color:var(--text);min-width:46px;text-align:right}
-.tr{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px}
-.trl{font-size:11px;color:var(--muted)}
-.tog{position:relative;width:28px;height:16px;cursor:pointer}
+html,body{height:100%;background:var(--bg);overflow:hidden}
+body{display:flex;flex-direction:column;font-family:var(--font);color:var(--text)}
+
+/* ── Top bar ── */
+#tb{display:flex;align-items:center;justify-content:space-between;padding:5px 14px;background:var(--p1);border-bottom:1px solid var(--border);flex-shrink:0;gap:10px}
+.tb-l{display:flex;align-items:center;gap:10px}
+.tb-logo{width:18px;height:18px;background:var(--red);border-radius:3px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.tb-logo svg{width:11px;height:11px;fill:#fff}
+.tb-name{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.tb-badge{font-size:7.5px;font-family:var(--mono);background:rgba(204,48,48,.15);color:var(--red);border:1px solid rgba(204,48,48,.25);border-radius:2px;padding:1px 5px;letter-spacing:.06em}
+.tb-r{display:flex;align-items:center;gap:14px;font-size:8px;font-family:var(--mono);color:var(--muted)}
+.tb-r span{display:flex;align-items:center;gap:4px}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:blink 2s infinite}
+@keyframes blink{0%,100%{opacity:1}45%,55%{opacity:.15}}
+@keyframes blink2{0%,100%{opacity:1}50%{opacity:.25}}
+
+/* ── Layout ── */
+#main{display:grid;grid-template-columns:1fr 268px;flex:1;overflow:hidden;min-height:0}
+
+/* ── Camera feed ── */
+#feed{position:relative;background:#000;display:flex;flex-direction:column;overflow:hidden}
+canvas#cam{display:block;flex:1;width:100%;min-height:0;image-rendering:crisp-edges}
+/* scanline effect */
+#feed::after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,.018) 3px,rgba(0,0,0,.018) 4px);pointer-events:none;z-index:2}
+/* vignette */
+#feed::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,.45) 100%);pointer-events:none;z-index:1}
+
+/* HUD overlays */
+.hud{position:absolute;z-index:3;font-family:var(--mono);pointer-events:none}
+#hud-tl{top:8px;left:10px;font-size:8.5px;line-height:1.9;color:rgba(255,255,255,.48)}
+#hud-tr{top:8px;right:10px;font-size:8.5px;line-height:1.9;color:rgba(255,255,255,.48);text-align:right}
+#hud-bl{bottom:28px;left:10px;font-size:7.5px;line-height:1.7;color:rgba(255,255,255,.32)}
+#hud-br{bottom:28px;right:10px;font-size:7.5px;line-height:1.7;color:rgba(255,255,255,.28);text-align:right}
+.rec-dot{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--red);margin-right:4px;vertical-align:middle;animation:blink 1.2s infinite}
+/* corner brackets */
+.corner{position:absolute;width:14px;height:14px;z-index:3;pointer-events:none}
+#cb-tl{top:6px;left:6px;border-top:1.5px solid rgba(255,255,255,.22);border-left:1.5px solid rgba(255,255,255,.22)}
+#cb-tr{top:6px;right:6px;border-top:1.5px solid rgba(255,255,255,.22);border-right:1.5px solid rgba(255,255,255,.22)}
+#cb-bl{bottom:24px;left:6px;border-bottom:1.5px solid rgba(255,255,255,.22);border-left:1.5px solid rgba(255,255,255,.22)}
+#cb-br{bottom:24px;right:6px;border-bottom:1.5px solid rgba(255,255,255,.22);border-right:1.5px solid rgba(255,255,255,.22)}
+
+/* alert banner */
+#alert-banner{position:absolute;left:0;right:0;top:36px;z-index:6;pointer-events:none;display:flex;justify-content:center}
+#alert-inner{background:rgba(180,12,12,.94);color:#fff;font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.06em;padding:4px 20px;border-radius:2px;opacity:0;transition:opacity .12s;white-space:nowrap;border-top:2px solid rgba(255,80,80,.5)}
+
+/* plate zoom */
+#plate-zoom{position:absolute;right:10px;bottom:36px;z-index:5;pointer-events:none;display:none;background:rgba(0,0,0,.88);border:1px solid rgba(255,255,255,.12);border-radius:3px;overflow:hidden;backdrop-filter:blur(4px)}
+#plate-cv{display:block;width:156px;height:54px}
+#plate-lbl{font-family:var(--mono);font-size:7px;color:rgba(255,255,255,.42);text-align:center;padding:2px 0 3px;letter-spacing:.08em}
+
+/* flash */
+#flash{position:absolute;inset:0;z-index:4;pointer-events:none;opacity:0;background:rgba(200,48,48,.07);transition:opacity .07s}
+
+/* ticker */
+#ticker{height:20px;background:rgba(0,0,0,.5);border-top:1px solid var(--border);overflow:hidden;flex-shrink:0;display:flex;align-items:center;padding:0 8px;gap:0;font-size:7.5px;font-family:var(--mono);white-space:nowrap;color:var(--muted);position:relative;z-index:3}
+#ticker-label{font-size:7.5px;font-weight:700;color:var(--red);letter-spacing:.1em;margin-right:10px;flex-shrink:0;border-right:1px solid rgba(255,255,255,.1);padding-right:10px}
+#ticker-inner{display:flex;align-items:center;gap:0;overflow:hidden}
+.ti{display:inline-flex;align-items:center;gap:5px;margin-right:18px;flex-shrink:0}
+.tib{padding:0 4px;border-radius:2px;font-size:7px;font-weight:700}
+.tiSPEED{background:rgba(204,48,48,.22);color:#e07070}
+.tiHONK{background:rgba(184,112,8,.22);color:#d09030}
+.tiDROWSY,.tiSWERVE{background:rgba(96,88,184,.22);color:#9888d8}
+
+/* ── Sidebar ── */
+#sidebar{display:flex;flex-direction:column;border-left:1px solid var(--border);overflow:hidden;min-height:0;background:var(--p1)}
+#tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0}
+.tab{flex:1;padding:7px 4px;font-size:8.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);text-align:center;cursor:pointer;border-bottom:2px solid transparent;transition:.15s;user-select:none}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--cyan);border-bottom-color:var(--cyan)}
+.tab-panel{display:none;flex:1;flex-direction:column;overflow-y:auto;overflow-x:hidden;min-height:0}
+.tab-panel.active{display:flex}
+.sp{padding:10px 12px;border-bottom:1px solid var(--border);flex-shrink:0}
+.sp:last-child{border-bottom:none}
+.st{font-size:7.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin-bottom:8px}
+
+/* metric cards */
+.mcards{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.mc{background:var(--p2);border-radius:4px;padding:7px 9px;border:1px solid var(--border)}
+.mc-l{font-size:7px;color:var(--muted);margin-bottom:2px;text-transform:uppercase;letter-spacing:.07em}
+.mc-v{font-size:21px;font-weight:700;line-height:1.1;font-family:var(--mono)}
+.mc-v.g{color:var(--green)}.mc-v.r{color:var(--red)}.mc-v.a{color:var(--amber)}.mc-v.b{color:var(--cyan)}
+.mc-sub{font-size:7px;color:var(--muted);margin-top:1px;font-family:var(--mono)}
+
+/* speed gauge */
+#gauge-wrap{display:none;align-items:center;gap:10px;margin-top:7px;padding:7px 9px;background:var(--p2);border-radius:4px;border:1px solid var(--border)}
+.gi-l{font-size:7px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px}
+.gi-v{font-size:16px;font-weight:700;font-family:var(--mono)}
+.gi-v.safe{color:var(--green)}.gi-v.warn{color:var(--amber)}.gi-v.danger{color:var(--red)}
+.gi-p{font-size:8px;color:var(--muted);font-family:var(--mono)}
+
+/* detectors */
+.dr{display:flex;align-items:center;gap:7px;padding:5px 7px;background:var(--p2);border-radius:4px;margin-bottom:4px;border:1px solid transparent;transition:border-color .2s,background .2s}
+.dr:last-child{margin-bottom:0}
+.dr.firing{border-color:rgba(204,48,48,.3);background:rgba(204,48,48,.04)}
+.dd{width:6px;height:6px;border-radius:50%;flex-shrink:0;background:var(--dim);transition:background .2s}
+.dd.on{background:var(--green)}.dd.fire{background:var(--red);animation:blink2 .4s infinite}
+.dn{font-size:9.5px;flex:1;color:var(--muted)}
+.dv{font-size:8px;font-family:var(--mono);color:var(--dim)}
+
+/* controls */
+.cr{display:flex;align-items:center;gap:7px;margin-bottom:6px}
+.cr label{font-size:9px;color:var(--muted);width:70px;flex-shrink:0}
+.cr input[type=range]{flex:1;accent-color:var(--blue);height:3px;cursor:pointer}
+.cv{font-size:9px;font-weight:600;color:var(--text);min-width:42px;text-align:right;font-family:var(--mono)}
+.selrow{display:flex;align-items:center;gap:7px;margin-bottom:6px}
+.selrow label{font-size:9px;color:var(--muted);width:70px;flex-shrink:0}
+.selrow select{flex:1;background:var(--p2);border:1px solid var(--border);color:var(--text);font-size:8.5px;padding:3px 6px;border-radius:3px;font-family:var(--mono);cursor:pointer}
+.togrow{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.togrow span{font-size:9px;color:var(--muted)}
+.tog{position:relative;width:26px;height:14px;cursor:pointer}
 .tog input{opacity:0;width:0;height:0;position:absolute}
-.ts2{position:absolute;inset:0;background:var(--hint);border-radius:8px;transition:.2s}
-.tog input:checked+.ts2{background:var(--green)}
-.ts2::after{content:'';position:absolute;width:12px;height:12px;left:2px;top:2px;background:#fff;border-radius:50%;transition:.2s}
-.tog input:checked+.ts2::after{left:14px}
-#startbtn{width:100%;padding:8px;border-radius:7px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid var(--border);background:var(--s2);color:var(--text);letter-spacing:.02em;transition:.15s}
-#startbtn:hover{background:var(--border)}
-#startbtn.stop{border-color:var(--red);color:var(--red)}
-.logpanel{background:var(--s1);border:1px solid var(--border);border-radius:10px;overflow:hidden}
-.lh{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid var(--border)}
-.lh span{font-size:9px;font-weight:600;color:var(--hint);text-transform:uppercase;letter-spacing:.1em}
-.lcount{font-family:var(--mono);font-size:10px;color:var(--hint)}
-.lb{height:130px;overflow-y:auto}
-.le{display:grid;grid-template-columns:54px 62px 84px 1fr;gap:4px;padding:4px 12px;font-size:10px;align-items:center;border-bottom:1px solid rgba(255,255,255,.04)}
-.le:last-child{border-bottom:none}
-.lt2{color:var(--hint);font-family:var(--mono)}
-.badge{padding:1px 6px;border-radius:3px;font-size:9px;font-weight:600}
-.bSPEED{background:rgba(214,63,63,.2);color:#f09090}
-.bHONK{background:rgba(196,126,16,.2);color:#e8b860}
-.bDROWSY{background:rgba(106,96,204,.2);color:#b0a8f0}
-.bSWERVE{background:rgba(106,96,204,.15);color:#9a90e8}
-.lpl{font-family:var(--mono);font-size:9px;color:var(--text)}
-.ld{font-size:9px;color:var(--muted)}
-.empty{padding:24px;text-align:center;font-size:11px;color:var(--hint)}
-footer{margin-top:10px;text-align:center;font-size:9px;color:var(--hint);letter-spacing:.04em}
+.ts{position:absolute;inset:0;background:var(--dim);border-radius:7px;transition:.2s}
+.tog input:checked+.ts{background:var(--green)}
+.ts::after{content:'';position:absolute;width:10px;height:10px;left:2px;top:2px;background:#fff;border-radius:50%;transition:.2s}
+.tog input:checked+.ts::after{left:14px}
+
+/* buttons */
+#startbtn,#exportbtn{width:100%;padding:7px;border-radius:4px;font-size:10px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--p2);color:var(--text);letter-spacing:.04em;transition:.15s;display:flex;align-items:center;justify-content:center;gap:6px}
+#startbtn:hover,#exportbtn:hover{background:var(--border2);color:#fff}
+#startbtn.stop{border-color:rgba(204,48,48,.4);color:var(--red);background:rgba(204,48,48,.05)}
+#exportbtn{margin-top:4px;font-size:9.5px;font-weight:400;color:var(--muted)}
+
+/* violation log */
+.vrow{display:grid;grid-template-columns:46px 52px 74px 1fr;gap:3px;padding:4px 12px;font-size:8px;align-items:center;border-bottom:1px solid rgba(255,255,255,.025);cursor:default;transition:background .1s}
+.vrow:hover{background:rgba(255,255,255,.018)}
+.vt{color:var(--muted);font-family:var(--mono)}
+.vb{padding:1px 4px;border-radius:2px;font-size:7px;font-weight:700;letter-spacing:.03em}
+.vbSPEED{background:rgba(204,48,48,.18);color:#e07070}
+.vbHONK{background:rgba(184,112,8,.18);color:#cf9030}
+.vbDROWSY,.vbSWERVE{background:rgba(96,88,184,.18);color:#9080d8}
+.vpl{font-family:var(--mono);font-size:7.5px;color:rgba(184,206,221,.6)}
+.vd{font-size:7.5px;color:var(--muted)}
+.vempty{padding:16px;text-align:center;font-size:8.5px;color:var(--dim)}
+.vlog-hdr{display:flex;align-items:center;justify-content:space-between;padding:5px 12px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--p1);z-index:1}
+.vlog-hdr .st{margin:0}
+#vcount{font-size:7.5px;font-family:var(--mono);color:var(--dim)}
+
+/* analysis charts */
+.chart-wrap{position:relative;height:82px;background:var(--p2);border-radius:4px;border:1px solid var(--border);overflow:hidden;margin-bottom:7px}
+canvas.chart{display:block;width:100%;height:100%}
+.chart-label{position:absolute;top:4px;left:7px;font-size:7px;color:var(--muted);font-family:var(--mono)}
+.vtype-row{display:flex;align-items:center;gap:7px;margin-bottom:5px}
+.vtype-name{font-size:8px;color:var(--muted);width:48px;flex-shrink:0;font-family:var(--mono)}
+.vtype-bar-wrap{flex:1;height:10px;background:var(--p2);border-radius:2px;overflow:hidden;border:1px solid var(--border)}
+.vtype-bar{height:100%;border-radius:2px;transition:width .35s}
+.vtype-count{font-size:8px;font-family:var(--mono);color:var(--muted);min-width:18px;text-align:right}
+
+/* snapshot grid */
+.snap-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.snap-card{background:var(--p2);border:1px solid var(--border);border-radius:3px;overflow:hidden;cursor:default;transition:border-color .15s}
+.snap-card:hover{border-color:var(--border2)}
+canvas.snap-cv{display:block;width:100%;height:50px}
+.snap-info{padding:3px 5px}
+.snap-type{font-size:7px;font-weight:700;letter-spacing:.05em}
+.snap-plate{font-size:7.5px;font-family:var(--mono);color:var(--muted)}
+.snap-time{font-size:7px;color:var(--dim)}
+
+/* vehicles table */
+.vtable{width:100%;border-collapse:collapse;font-size:8px}
+.vtable th{font-size:7.5px;font-weight:600;color:var(--dim);letter-spacing:.07em;text-transform:uppercase;padding:3px 8px;border-bottom:1px solid var(--border);text-align:left;position:sticky;top:0;background:var(--p1)}
+.vtable td{padding:4px 8px;border-bottom:1px solid rgba(255,255,255,.025);color:var(--muted)}
+.vtable tr:hover td{background:rgba(255,255,255,.012)}
+.vt-plate{font-family:var(--mono);color:var(--text) !important}
+.vt-spd{font-family:var(--mono);color:var(--green) !important}
+.vt-spd.over{color:var(--red) !important}
+.vt-flag{font-size:7.5px;padding:0 4px;border-radius:2px;background:rgba(204,48,48,.18);color:#d06060}
+.no-data{padding:14px;text-align:center;font-size:8.5px;color:var(--dim)}
 </style>
 </head>
 <body>
-<h1>AI Traffic Enforcement System — Visual Simulator</h1>
 
-<div class="grid">
-  <div class="road-wrap">
-    <canvas id="c" width="760" height="310"></canvas>
-    <div class="cam-bar">
-      <span class="cam-id">CAM-01 · NH-44 · KM 142.3 · 1080p/30fps</span>
-      <div class="rec"><div class="recdot"></div><span id="rtime">00:00:00</span></div>
+<div id="tb">
+  <div class="tb-l">
+    <div class="tb-logo"><svg viewBox="0 0 12 12"><path d="M6 1L2 4v5l4 2 4-2V4z" opacity=".8"/><circle cx="6" cy="7" r="1.5"/></svg></div>
+    <span class="tb-name">AI Traffic Enforcement System</span>
+    <span class="tb-badge">SIMULATOR v6</span>
+  </div>
+  <div class="tb-r">
+    <span><div class="live-dot"></div>LIVE</span>
+    <span>CAM-01 · NH-44 · KM 142.3</span>
+    <span id="tb-ts">--:--:-- UTC</span>
+    <span>17.3850°N 78.4867°E</span>
+  </div>
+</div>
+
+<div id="main">
+  <div id="feed">
+    <canvas id="cam"></canvas>
+
+    <div class="hud" id="hud-tl">
+      <div><span class="rec-dot"></span>REC &nbsp;<span id="rec-t">00:00:00</span></div>
+      <div>CAM-01 &nbsp;·&nbsp; 1920×1080 &nbsp;·&nbsp; 30 fps</div>
+      <div>NH-44 · KM 142.3 &nbsp;·&nbsp; 17.3850°N 78.4867°E</div>
     </div>
+    <div class="hud" id="hud-tr">
+      <div id="hud-ts2">--:--:-- UTC</div>
+      <div id="hud-veh">TRACKED: 0</div>
+      <div id="hud-limit">LIMIT: 60 KM/H</div>
+    </div>
+    <div class="hud" id="hud-bl">
+      <div><span id="hud-fps">FPS: 30</span> &nbsp;·&nbsp; CONF ≥ 0.45 &nbsp;·&nbsp; YOLOv8n-v3</div>
+      <div id="hud-env">DAYTIME · CLEAR · VIS: GOOD</div>
+    </div>
+    <div class="hud" id="hud-br">
+      <div>ENFORCEMENT MODE: ACTIVE</div>
+      <div id="hud-viol">VIOLATIONS: 0</div>
+    </div>
+
+    <div class="corner" id="cb-tl"></div>
+    <div class="corner" id="cb-tr"></div>
+    <div class="corner" id="cb-bl"></div>
+    <div class="corner" id="cb-br"></div>
+
     <div id="flash"></div>
+    <div id="alert-banner"><div id="alert-inner"></div></div>
+    <div id="plate-zoom"><canvas id="plate-cv" width="312" height="108"></canvas><div id="plate-lbl">LICENSE PLATE · OCR RESULT</div></div>
   </div>
 
-  <div class="sidebar">
-    <div class="panel">
-      <div class="ptitle">Live metrics</div>
-      <div class="stats">
-        <div class="stat"><div class="sn">Vehicles</div><div class="sv g" id="m0">0</div></div>
-        <div class="stat"><div class="sn">Violations</div><div class="sv r" id="m1">0</div></div>
-        <div class="stat"><div class="sn">Speeders</div><div class="sv a" id="m2">0</div></div>
-        <div class="stat"><div class="sn">Uptime</div><div class="sv" id="m3">00:00</div></div>
+  <div id="sidebar">
+    <div id="tabs">
+      <div class="tab active" data-tab="monitor">Monitor</div>
+      <div class="tab" data-tab="analysis">Analysis</div>
+      <div class="tab" data-tab="vehicles">Vehicles</div>
+    </div>
+
+    <!-- MONITOR -->
+    <div class="tab-panel active" id="tp-monitor">
+      <div class="sp">
+        <div class="st">Live metrics</div>
+        <div class="mcards">
+          <div class="mc"><div class="mc-l">Vehicles</div><div class="mc-v g" id="m0">0</div><div class="mc-sub" id="m0s">tracking</div></div>
+          <div class="mc"><div class="mc-l">Violations</div><div class="mc-v r" id="m1">0</div><div class="mc-sub">this session</div></div>
+          <div class="mc"><div class="mc-l">Speeders</div><div class="mc-v a" id="m2">0</div><div class="mc-sub" id="m2s">— avg km/h</div></div>
+          <div class="mc"><div class="mc-l">Uptime</div><div class="mc-v b" id="m3">00:00</div><div class="mc-sub">session time</div></div>
+        </div>
+        <div id="gauge-wrap">
+          <canvas id="gc" width="54" height="54"></canvas>
+          <div><div class="gi-l">Last detected speed</div><div class="gi-v safe" id="gv">— km/h</div><div class="gi-p" id="gp">—</div></div>
+        </div>
+      </div>
+
+      <div class="sp">
+        <div class="st">Detector status</div>
+        <div class="dr" id="dr0"><div class="dd" id="dd0"></div><span class="dn">YOLOv8 tracker</span><span class="dv" id="dv0">—</span></div>
+        <div class="dr" id="dr1"><div class="dd" id="dd1"></div><span class="dn">Speed (line Δt)</span><span class="dv" id="dv1">—</span></div>
+        <div class="dr" id="dr2"><div class="dd" id="dd2"></div><span class="dn">Drowsiness (EAR)</span><span class="dv" id="dv2">—</span></div>
+        <div class="dr" id="dr3"><div class="dd" id="dd3"></div><span class="dn">Honk (FFT audio)</span><span class="dv" id="dv3">—</span></div>
+      </div>
+
+      <div class="sp">
+        <div class="st">Controls</div>
+        <div class="cr"><label>Speed limit</label><input type="range" id="rl" min="30" max="120" step="10" value="60"><span class="cv" id="cl">60 km/h</span></div>
+        <div class="cr"><label>Density</label><input type="range" id="rd" min="1" max="8" step="1" value="4"><span class="cv" id="cd">4</span></div>
+        <div class="cr"><label>Bad drivers</label><input type="range" id="rb" min="0" max="5" step="1" value="2"><span class="cv" id="cb">2</span></div>
+        <div class="selrow"><label>Time of day</label>
+          <select id="tod"><option value="day">Daytime</option><option value="dusk">Dusk / golden hour</option><option value="night">Night</option></select>
+        </div>
+        <div class="selrow"><label>Weather</label>
+          <select id="wx"><option value="clear">Clear</option><option value="rain">Rain</option><option value="fog">Fog</option></select>
+        </div>
+        <div class="togrow"><span>Speed detection</span><label class="tog"><input type="checkbox" id="ts" checked><span class="ts"></span></label></div>
+        <div class="togrow"><span>Drunk / drowsy</span><label class="tog"><input type="checkbox" id="td" checked><span class="ts"></span></label></div>
+        <div class="togrow"><span>Honk detection</span><label class="tog"><input type="checkbox" id="th" checked><span class="ts"></span></label></div>
+        <button id="startbtn">
+          <svg width="10" height="10" viewBox="0 0 12 12" fill="currentColor"><polygon points="2,1 11,6 2,11"/></svg>
+          Start simulation
+        </button>
+        <button id="exportbtn">↓ Export violation CSV</button>
+      </div>
+
+      <div style="flex:1;display:flex;flex-direction:column;min-height:0">
+        <div class="vlog-hdr"><div class="st">Violation log</div><span id="vcount">0 records</span></div>
+        <div id="vlog-body" style="overflow-y:auto;flex:1;min-height:0"><div class="vempty">No violations recorded yet.</div></div>
       </div>
     </div>
 
-    <div class="panel">
-      <div class="ptitle">Detector status</div>
-      <div class="drow"><div class="dd" id="d0"></div><span class="dn">YOLOv8 tracker</span><span class="dv" id="v0">—</span></div>
-      <div class="drow"><div class="dd" id="d1"></div><span class="dn">Speed (line Δt)</span><span class="dv" id="v1">—</span></div>
-      <div class="drow"><div class="dd" id="d2"></div><span class="dn">Drowsiness (EAR)</span><span class="dv" id="v2">—</span></div>
-      <div class="drow"><div class="dd" id="d3"></div><span class="dn">Honk (FFT audio)</span><span class="dv" id="v3">—</span></div>
+    <!-- ANALYSIS -->
+    <div class="tab-panel" id="tp-analysis">
+      <div class="sp">
+        <div class="st">Speed over time (km/h)</div>
+        <div class="chart-wrap"><canvas class="chart" id="speed-chart"></canvas><span class="chart-label">km/h · last 40 readings</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:7.5px;color:var(--dim);font-family:var(--mono);padding:0 2px">
+          <span id="spd-min">min —</span><span id="spd-avg">avg —</span><span id="spd-max">max —</span>
+        </div>
+      </div>
+      <div class="sp">
+        <div class="st">Violation breakdown</div>
+        <div class="vtype-row"><span class="vtype-name">SPEED</span><div class="vtype-bar-wrap"><div class="vtype-bar" id="bar-speed" style="width:0%;background:var(--red)"></div></div><span class="vtype-count" id="cnt-speed">0</span></div>
+        <div class="vtype-row"><span class="vtype-name">DROWSY</span><div class="vtype-bar-wrap"><div class="vtype-bar" id="bar-drowsy" style="width:0%;background:var(--purple)"></div></div><span class="vtype-count" id="cnt-drowsy">0</span></div>
+        <div class="vtype-row"><span class="vtype-name">SWERVE</span><div class="vtype-bar-wrap"><div class="vtype-bar" id="bar-swerve" style="width:0%;background:#6058b8"></div></div><span class="vtype-count" id="cnt-swerve">0</span></div>
+        <div class="vtype-row"><span class="vtype-name">HONK</span><div class="vtype-bar-wrap"><div class="vtype-bar" id="bar-honk" style="width:0%;background:var(--amber)"></div></div><span class="vtype-count" id="cnt-honk">0</span></div>
+      </div>
+      <div class="sp">
+        <div class="st">Violation rate (per 3 sec)</div>
+        <div class="chart-wrap"><canvas class="chart" id="rate-chart"></canvas><span class="chart-label">events</span></div>
+      </div>
+      <div class="sp" style="flex:1;min-height:0">
+        <div class="st">Incident snapshots</div>
+        <div class="snap-grid" id="snap-grid"><div class="vempty" style="grid-column:span 2">Incidents appear here as they occur.</div></div>
+      </div>
     </div>
 
-    <div class="panel">
-      <div class="ptitle">Controls</div>
-      <div class="cr"><label>Speed limit</label><input type="range" id="rl" min="30" max="120" step="10" value="60"><span class="cv" id="cl">60 km/h</span></div>
-      <div class="cr"><label>Density</label><input type="range" id="rd" min="1" max="8" step="1" value="4"><span class="cv" id="cd">4</span></div>
-      <div class="cr"><label>Bad drivers</label><input type="range" id="rb" min="0" max="5" step="1" value="2"><span class="cv" id="cb">2</span></div>
-      <div class="tr"><span class="trl">Speed detection</span><label class="tog"><input type="checkbox" id="ts" checked><span class="ts2"></span></label></div>
-      <div class="tr"><span class="trl">Drunk detection</span><label class="tog"><input type="checkbox" id="td" checked><span class="ts2"></span></label></div>
-      <div class="tr"><span class="trl">Honk detection</span><label class="tog"><input type="checkbox" id="th" checked><span class="ts2"></span></label></div>
-      <button id="startbtn">▶ Start simulation</button>
+    <!-- VEHICLES -->
+    <div class="tab-panel" id="tp-vehicles">
+      <div class="vlog-hdr"><div class="st">Active vehicles</div><span id="veh-count-lbl">0 tracked</span></div>
+      <div style="flex:1;overflow-y:auto;min-height:0">
+        <table class="vtable">
+          <thead><tr><th>ID</th><th>Plate</th><th>Speed</th><th>Lane</th><th>Flag</th></tr></thead>
+          <tbody id="veh-tbody"><tr><td colspan="5" class="no-data">Start simulation to see vehicles.</td></tr></tbody>
+        </table>
+      </div>
     </div>
   </div>
 </div>
 
-<div class="logpanel">
-  <div class="lh"><span>Violation log</span><span class="lcount" id="lc">0 records</span></div>
-  <div class="lb" id="lb"><div class="empty">Start the simulation to begin recording violations.</div></div>
+<div id="ticker">
+  <span id="ticker-label">ALERTS</span>
+  <div id="ticker-inner"><span style="color:var(--dim)">Waiting for violations…</span></div>
 </div>
-
-<footer>Smarter Roads, Safer Lives · AI Traffic Enforcement · Kranthi Kumar Yarlagadda · Open simulator/index.html in any browser</footer>
 
 <script>
 (function(){
-const cv=document.getElementById('c'),ctx=cv.getContext('2d');
-const W=cv.width,H=cv.height;
-const LANES=[76,122,168,214,260];
-const L1=100,L2=210;
-let running=false,animId=null,t0=null,uptInt=null;
-let vehs=[],nid=0,vTot=0,vSpd=0,fc=0,hCool=0;
-const PLATES=['KA05·MN1234','DL3C·AB2019','MH12·XY5678','TN09·ZX4321','AP28·KL9900','RJ14·RR3344','UP16·GH5544','GJ05·CF1122','TS07·DF2233','HR26·DN7755'];
-const CC=['#2e6bb5','#3a7faa','#245f9e','#1e5a96','#2c719a'];
-const TC=['#1e6b4e','#256040','#1a5842'];
+'use strict';
+/* ── Canvas setup ── */
+const cv=document.getElementById('cam');
+const ctx=cv.getContext('2d');
+function W(){return cv.clientWidth||800}
+function H(){return cv.clientHeight||480}
+function resizeCanvas(){cv.width=cv.clientWidth;cv.height=cv.clientHeight;}
+window.addEventListener('resize',()=>{resizeCanvas();if(!running)drawIdle();});
+resizeCanvas();
 
+/* ── Constants ── */
+const VP=()=>({x:W()*.5,y:H()*.38});
+const D1=.30,D2=.68;
+const PLATES=['KA·05MN1234','DL·3CAB2019','MH·12XY5678','TN·09ZX4321','AP·28KL9900','RJ·14RR3344','UP·16GH5544','GJ·05CF1122','TS·07DF2233','HR·26DN7755','PB·10TG8822','KL·07RN4411'];
+const CAR_COLORS=['#1e4f8c','#223d72','#2a5a90','#1a3d6e','#264e82','#2e3d70'];
+const TRUCK_COLORS=['#1a4a32','#15382a','#1e4a36'];
+const BAD_COLOR='#7a1515';
+
+/* ── State ── */
+let running=false,animId=null,t0=null,uptInt=null,fc=0,hCool=0;
+let vehs=[],nid=0,vTot=0,vSpd=0,logN=0;
+let cntSpeed=0,cntDrowsy=0,cntSwerve=0,cntHonk=0;
+let speedHistory=[],speedSum=0,speedCount=0,speedMin=999,speedMax=0;
+let rateH2=new Array(20).fill(0),rateWindow=0,lastRateMin=-1;
+let snapshots=[],tickItems=[],violationCSV="timestamp,type,plate,speed_kmh,detail\n";
+let rainDrops=Array.from({length:200},()=>({x:Math.random()*800,y:Math.random()*500,spd:8+Math.random()*6,len:10+Math.random()*8}));
+let fogAlpha=0;
+
+/* ── Helpers ── */
 function ri(a,b){return Math.floor(Math.random()*(b-a+1))+a}
 function rf(a,b){return Math.random()*(b-a)+a}
 function pick(a){return a[Math.floor(Math.random()*a.length)]}
@@ -145,215 +373,610 @@ function gb(){return+document.getElementById('rb').value}
 function gts(){return document.getElementById('ts').checked}
 function gtd(){return document.getElementById('td').checked}
 function gth(){return document.getElementById('th').checked}
+function getTOD(){return document.getElementById('tod').value}
+function getWX(){return document.getElementById('wx').value}
 
+/* ── Perspective helpers ── */
+function roadEdge(y){
+  const vp=VP(),vy=vp.y;const t=Math.max(0,(y-vy)/(H()-52-vy));
+  const nearW=W()*.92,farW=W()*.15;const w=farW+(nearW-farW)*t;
+  return{left:(W()-w)/2,right:(W()+w)/2,t};
+}
+function laneToXY(laneFrac,depth){
+  const vp=VP(),vy=vp.y;const y=vy+(H()-52-vy)*depth;
+  const e=roadEdge(y);const x=e.left+(e.right-e.left)*laneFrac;
+  return{x,y,scale:Math.pow(depth,.72)};
+}
+
+/* ── Spawn vehicle ── */
 function spawnV(){
-  const li=ri(0,4);
+  const li=ri(0,4);const lf=.08+li*.18+rf(-.04,.04);
   const bad=vehs.filter(v=>v.bad).length<gb()&&Math.random()<.42;
-  const truck=Math.random()<.18;
-  const lim=gl();
-  const spd=Math.random()<.36?lim+rf(8,38):rf(32,lim*.88);
-  const w=truck?ri(72,82):ri(42,52),h=truck?ri(22,26):ri(16,20);
-  return{id:nid++,x:-95,y:LANES[li],w,h,spd,truck,bad,
-    color:bad?'#a02020':(truck?pick(TC):pick(CC)),
+  const truck=Math.random()<.18;const lim=gl();
+  const spd=Math.random()<.36?lim+rf(8,40):rf(30,lim*.88);
+  return{id:nid++,laneFrac:lf,lane:li,depth:0,spd,truck,bad,
+    color:bad?BAD_COLOR:(truck?pick(TRUCK_COLORS):pick(CAR_COLORS)),
     plate:pick(PLATES),cl1:false,cl2:false,t1:null,t2:null,
-    ear:0,sp:rf(0,Math.PI*2),sAmt:bad?rf(13,24):0,sBase:LANES[li],
-    alerted:false,dAlerted:false,hl:0,hlType:'',
-    hChance:bad?.0042:.00030};
+    ear:0,sp:rf(0,Math.PI*2),sAmt:bad?rf(.022,.038):0,sBase:lf,
+    alerted:false,dAlerted:false,hl:0,hlType:'',measuredSpd:null,
+    hChance:bad?.0042:.00028};
 }
 
+/* ── Detector UI ── */
 function setDet(i,st,val){
-  const d=document.getElementById('d'+i),v=document.getElementById('v'+i);
+  const d=document.getElementById('dd'+i),dr=document.getElementById('dr'+i),v=document.getElementById('dv'+i);
+  if(!d)return;
   d.className='dd'+(st==='on'?' on':st==='fire'?' fire':'');
-  v.textContent=val||'—';
+  if(dr)dr.className='dr'+(st==='fire'?' firing':'');
+  if(v)v.textContent=val||'—';
 }
-function doFlash(){const f=document.getElementById('flash');f.style.opacity='1';setTimeout(()=>f.style.opacity='0',160);}
 
-let logN=0;
-function addLog(type,plate,detail){
-  vTot++;if(type==='SPEED')vSpd++;
+/* ── Alert banner ── */
+function showAlert(msg){
+  const el=document.getElementById('alert-inner');
+  el.textContent=msg;el.style.opacity='1';
+  clearTimeout(el._t);el._t=setTimeout(()=>el.style.opacity='0',2400);
+}
+
+/* ── Plate zoom ── */
+function showPlateZoom(v){
+  const pz=document.getElementById('plate-zoom'),pc=document.getElementById('plate-cv');
+  if(!pz||!pc)return;pz.style.display='block';
+  const c=pc.getContext('2d'),cw=312,ch=108;
+  /* plate bg */
+  c.fillStyle='#ddddc8';c.fillRect(0,0,cw,ch);
+  c.fillStyle='rgba(0,0,0,.06)';c.fillRect(0,0,cw,ch);
+  /* border */
+  c.strokeStyle='#888870';c.lineWidth=5;c.strokeRect(3,3,cw-6,ch-6);
+  /* text */
+  c.fillStyle='#111';c.font=`bold ${ch*.45}px monospace`;c.textAlign='center';c.textBaseline='middle';
+  c.fillText(v.plate,cw/2,ch/2+4);c.textBaseline='alphabetic';
+  /* OCR overlay */
+  c.fillStyle='rgba(0,0,60,.65)';c.fillRect(0,0,cw,20);
+  c.fillStyle='#80b0ff';c.font='9px monospace';c.textAlign='left';
+  c.fillText(`OCR CONF: ${(90+Math.random()*8).toFixed(1)}%  ·  PLATE DETECTED  ·  ${new Date().toTimeString().slice(0,8)}`,7,13);
+  setTimeout(()=>{pz.style.display='none';},3200);
+}
+
+/* ── Snapshot ── */
+function captureSnapshot(){const t=document.createElement('canvas');t.width=cv.width;t.height=cv.height;t.getContext('2d').drawImage(cv,0,0);return t;}
+function addSnapshot(type,plate,ts,img){
+  if(snapshots.length>=8)snapshots.shift();snapshots.unshift({type,plate,ts,img});renderSnapshots();
+}
+function renderSnapshots(){
+  const grid=document.getElementById('snap-grid');if(!grid)return;grid.innerHTML='';
+  if(!snapshots.length){grid.innerHTML='<div class="vempty" style="grid-column:span 2">Incidents appear here.</div>';return;}
+  snapshots.forEach(s=>{
+    const card=document.createElement('div');card.className='snap-card';
+    const sc2=document.createElement('canvas');sc2.className='snap-cv';card.appendChild(sc2);
+    const info=document.createElement('div');info.className='snap-info';
+    const typeColor={SPEED:'#e07070',HONK:'#cf9030',DROWSY:'#9080d8',SWERVE:'#9080d8'};
+    info.innerHTML=`<div class="snap-type" style="color:${typeColor[s.type]||'#aaa'}">${s.type}</div><div class="snap-plate">${s.plate}</div><div class="snap-time">${s.ts}</div>`;
+    card.appendChild(info);grid.appendChild(card);
+    if(s.img){sc2.width=s.img.width;sc2.height=s.img.height;sc2.getContext('2d').drawImage(s.img,0,0);}
+  });
+}
+
+/* ── Violation log ── */
+function addLog(type,plate,detail,speed,snapFrame){
+  vTot++;const ts=new Date().toTimeString().slice(0,8);
+  violationCSV+=`${ts},${type},${plate},${speed!=null?Math.round(speed):''},${detail}\n`;
+  if(type==='SPEED'){vSpd++;cntSpeed++;if(speed){speedSum+=speed;speedCount++;speedMin=Math.min(speedMin,speed);speedMax=Math.max(speedMax,speed);speedHistory.push(Math.round(speed));if(speedHistory.length>40)speedHistory.shift();}}
+  if(type==='DROWSY')cntDrowsy++;
+  if(type==='SWERVE')cntSwerve++;
+  if(type==='HONK')cntHonk++;
+  rateWindow++;
   document.getElementById('m1').textContent=vTot;
   document.getElementById('m2').textContent=vSpd;
-  document.getElementById('lc').textContent=++logN+' record'+(logN!==1?'s':'');
-  const lb=document.getElementById('lb');
-  if(lb.querySelector('.empty'))lb.innerHTML='';
-  const ts=new Date().toTimeString().slice(0,8);
-  const row=document.createElement('div');row.className='le';
-  row.innerHTML=`<span class="lt2">${ts}</span><span class="badge b${type}">${type}</span><span class="lpl">${plate}</span><span class="ld">${detail}</span>`;
-  lb.insertBefore(row,lb.firstChild);
-  if(lb.children.length>40)lb.removeChild(lb.lastChild);
-  doFlash();
+  document.getElementById('hud-viol').textContent='VIOLATIONS: '+vTot;
+  if(speedCount>0){
+    const avg=(speedSum/speedCount).toFixed(0);
+    document.getElementById('m2s').textContent='avg '+avg+' km/h';
+    document.getElementById('spd-min').textContent='min '+speedMin;
+    document.getElementById('spd-avg').textContent='avg '+avg;
+    document.getElementById('spd-max').textContent='max '+speedMax;
+  }
+  updateBarCharts();if(speedHistory.length>1)drawSpeedChart();drawRateChart();
+  if(snapFrame)addSnapshot(type,plate,ts,snapFrame);
+  document.getElementById('vcount').textContent=(++logN)+' record'+(logN!==1?'s':'');
+  const body=document.getElementById('vlog-body');
+  if(body.querySelector('.vempty'))body.innerHTML='';
+  const row=document.createElement('div');row.className='vrow';
+  row.innerHTML=`<span class="vt">${ts}</span><span class="vb vb${type}">${type}</span><span class="vpl">${plate}</span><span class="vd">${detail}</span>`;
+  body.insertBefore(row,body.firstChild);
+  if(body.children.length>100)body.removeChild(body.lastChild);
+  const item=document.createElement('span');item.className='ti';
+  item.innerHTML=`<span class="tib ti${type}">${type}</span>${plate} — ${detail}`;
+  tickItems.unshift(item);if(tickItems.length>8)tickItems.pop();
+  const ti=document.getElementById('ticker-inner');ti.innerHTML='';
+  tickItems.forEach((el,i)=>{if(i>0){const s=document.createElement('span');s.style.cssText='color:rgba(255,255,255,.08);margin:0 8px';s.textContent='·';ti.appendChild(s);}ti.appendChild(el.cloneNode(true));});
+  const f=document.getElementById('flash');f.style.opacity='1';setTimeout(()=>f.style.opacity='0',200);
+  if(type==='SPEED'&&speed!=null)showGauge(speed,gl(),plate);
 }
-function trigV(v,type,detail){v.hl=100;v.hlType=type;addLog(type,v.plate,detail);}
 
-/* ── render ── */
-function drawBg(){
-  /* night sky */
-  ctx.fillStyle='#0a1520';ctx.fillRect(0,0,W,45);
-  ctx.fillStyle='rgba(255,255,255,.05)';
-  for(let i=0;i<20;i++){ctx.beginPath();ctx.arc(ri(0,W),ri(2,38),rf(.3,1.2),0,Math.PI*2);ctx.fill();}
-  /* horizon glow */
-  const hg=ctx.createLinearGradient(0,42,0,68);hg.addColorStop(0,'#14263a');hg.addColorStop(1,'#1e3347');
-  ctx.fillStyle=hg;ctx.fillRect(0,42,W,28);
-  /* road */
-  ctx.fillStyle='#1e2d3a';ctx.fillRect(0,62,W,H-62);
-  /* subtle tarmac grain */
-  for(let y=70;y<H;y+=52){ctx.fillStyle='rgba(0,0,0,.08)';ctx.fillRect(0,y,W,1);}
-  /* lane dashes */
-  [104,150,196,242].forEach(y=>{
-    for(let x=0;x<W;x+=36){ctx.fillStyle='rgba(255,210,0,.3)';ctx.fillRect(x,y,20,2);}
+/* ── Charts ── */
+function updateBarCharts(){
+  const max=Math.max(1,cntSpeed,cntDrowsy,cntSwerve,cntHonk);
+  [['speed',cntSpeed],['drowsy',cntDrowsy],['swerve',cntSwerve],['honk',cntHonk]].forEach(([k,v])=>{
+    const b=document.getElementById('bar-'+k);if(b)b.style.width=(v/max*100)+'%';
+    const c2=document.getElementById('cnt-'+k);if(c2)c2.textContent=v;
   });
+}
+function drawSpeedChart(){
+  const el=document.getElementById('speed-chart');if(!el||speedHistory.length<2)return;
+  el.width=el.offsetWidth||248;el.height=el.offsetHeight||82;
+  const c=el.getContext('2d'),cw=el.width,ch=el.height,pad=5;c.clearRect(0,0,cw,ch);
+  const lim=gl(),mn=Math.min(...speedHistory)-5,mx=Math.max(...speedHistory,lim)+10;
+  const sx=i=>pad+(cw-pad*2)*(i/(speedHistory.length-1));
+  const sy=v=>ch-pad-(ch-pad*2)*((v-mn)/(mx-mn));
+  /* limit line */
+  const ly=sy(lim);c.strokeStyle='rgba(204,48,48,.28)';c.lineWidth=1;c.setLineDash([4,3]);
+  c.beginPath();c.moveTo(pad,ly);c.lineTo(cw-pad,ly);c.stroke();c.setLineDash([]);
+  c.fillStyle='rgba(204,48,48,.55)';c.font='6.5px monospace';c.fillText('limit '+lim,cw-32,ly-2);
+  /* area fill */
+  c.beginPath();c.moveTo(sx(0),ch-pad);speedHistory.forEach((v,i)=>c.lineTo(sx(i),sy(v)));
+  c.lineTo(sx(speedHistory.length-1),ch-pad);c.closePath();
+  c.fillStyle='rgba(26,106,184,.14)';c.fill();
+  /* line */
+  c.beginPath();speedHistory.forEach((v,i)=>{if(i===0)c.moveTo(sx(i),sy(v));else c.lineTo(sx(i),sy(v));});
+  c.strokeStyle='rgba(26,106,184,.7)';c.lineWidth=1.5;c.stroke();
+  /* violation dots */
+  speedHistory.forEach((v,i)=>{if(v>lim){c.beginPath();c.arc(sx(i),sy(v),2.5,0,Math.PI*2);c.fillStyle='var(--red)';c.fill();}});
+}
+function drawRateChart(){
+  const el=document.getElementById('rate-chart');if(!el)return;
+  el.width=el.offsetWidth||248;el.height=el.offsetHeight||82;
+  const c=el.getContext('2d'),cw=el.width,ch=el.height,pad=4;c.clearRect(0,0,cw,ch);
+  const mx=Math.max(1,...rateH2),bw=(cw-pad*2)/rateH2.length-1;
+  rateH2.forEach((v,i)=>{const bh=(ch-pad*2)*(v/mx);const x=pad+i*(bw+1),y=ch-pad-bh;
+    c.fillStyle=v>2?'rgba(204,48,48,.45)':v>0?'rgba(26,106,184,.4)':'rgba(255,255,255,.04)';c.fillRect(x,y,bw,bh);
+  });
+}
+function showGauge(speed,limit,plate){
+  const gc=document.getElementById('gc'),gx=gc.getContext('2d');
+  document.getElementById('gauge-wrap').style.display='flex';
+  const frac=Math.min(speed/(limit*1.8),1);
+  const col=speed>limit?'var(--red)':speed>limit*.9?'var(--amber)':'var(--green)';
+  gx.clearRect(0,0,54,54);
+  gx.beginPath();gx.arc(27,31,18,Math.PI*.75,Math.PI*2.25);gx.strokeStyle='rgba(255,255,255,.06)';gx.lineWidth=5;gx.lineCap='round';gx.stroke();
+  gx.beginPath();gx.arc(27,31,18,Math.PI*.75,Math.PI*.75+frac*Math.PI*1.5);gx.strokeStyle=col;gx.lineWidth=5;gx.stroke();
+  const ang=Math.PI*.75+frac*Math.PI*1.5;gx.beginPath();gx.arc(27+18*Math.cos(ang),31+18*Math.sin(ang),3,0,Math.PI*2);gx.fillStyle=col;gx.fill();
+  const gv=document.getElementById('gv');gv.textContent=Math.round(speed)+' km/h';gv.className='gi-v '+(speed>limit?'danger':speed>limit*.9?'warn':'safe');
+  document.getElementById('gp').textContent=plate;
+}
+
+/* ── Scene drawing ── */
+function getSky(){
+  const tod=getTOD();
+  if(tod==='night')return{top:'#010306',horizon:'#070e18',stars:true,ambient:.1};
+  if(tod==='dusk')return{top:'#12061e',horizon:'#c04808',stars:false,ambient:.55};
+  return{top:'#1e4a70',horizon:'#a8cce0',stars:false,ambient:1};
+}
+let starCache=null;
+function getStars(){
+  if(!starCache){starCache=Array.from({length:80},()=>({x:Math.random(),y:Math.random(),r:Math.random()*1.1+.2,br:Math.random()}));}
+  return starCache;
+}
+
+function drawSky(){
+  const sky=getSky(),vp=VP();
+  const g=ctx.createLinearGradient(0,0,0,vp.y+12);g.addColorStop(0,sky.top);g.addColorStop(1,sky.horizon);
+  ctx.fillStyle=g;ctx.fillRect(0,0,W(),vp.y+12);
+  if(sky.stars&&getTOD()==='night'){
+    getStars().forEach(s=>{
+      const twinkle=.5+.5*Math.sin(fc*.04+s.br*20);
+      ctx.fillStyle=`rgba(255,255,255,${(.3+s.br*.7)*twinkle})`;
+      ctx.beginPath();ctx.arc(s.x*W(),s.y*vp.y,s.r,0,Math.PI*2);ctx.fill();
+    });
+  }
+}
+
+function drawScenery(){
+  const tod=getTOD(),sky=getSky(),amb=sky.ambient,vp=VP(),vy=vp.y;
+
+  /* distant hills */
+  ctx.fillStyle=tod==='night'?'rgba(8,14,22,.9)':tod==='dusk'?'rgba(40,18,35,.7)':'rgba(55,90,70,.55)';
+  ctx.beginPath();ctx.moveTo(0,vy+2);
+  const hillPts=[0,.06,.13,.20,.28,.36,.44,.52,.60,.70,.80,.90,1];
+  const hillH=[0,8,18,12,24,15,20,10,16,22,13,8,0];
+  hillPts.forEach((x,i)=>ctx.lineTo(x*W(),vy-hillH[i]));
+  ctx.lineTo(W(),vy+2);ctx.closePath();ctx.fill();
+
+  /* trees LEFT */
+  const treeSpecs=[[.03,22],[.075,28],[.12,19],[.055,15],[.10,24],[.02,12]];
+  treeSpecs.forEach(([fx,sz])=>{
+    const tx=W()*fx,ty=vy+sz*.38;
+    ctx.fillStyle=`rgba(${tod==='night'?'15,28,15':'30,55,22'},${(.55*amb+.1)})`;
+    ctx.beginPath();ctx.moveTo(tx,ty-sz);ctx.lineTo(tx+sz*.45,ty+sz*.3);ctx.lineTo(tx-sz*.45,ty+sz*.3);ctx.closePath();ctx.fill();
+    ctx.fillStyle=`rgba(${tod==='night'?'10,22,10':'22,42,16'},${(.45*amb+.08)})`;
+    ctx.beginPath();ctx.moveTo(tx,ty-sz*1.2);ctx.lineTo(tx+sz*.32,ty-sz*.1);ctx.lineTo(tx-sz*.32,ty-sz*.1);ctx.closePath();ctx.fill();
+    /* trunk */
+    ctx.fillStyle=`rgba(55,35,15,${.5*amb+.1})`;ctx.fillRect(tx-2,ty+sz*.3,4,sz*.4);
+    /* night glow */
+    if(tod==='night'){ctx.fillStyle='rgba(255,220,80,.02)';ctx.beginPath();ctx.arc(tx,ty,sz*.6,0,Math.PI*2);ctx.fill();}
+  });
+
+  /* buildings RIGHT */
+  const blds=[{x:.78,w:.05,h:52},{x:.84,w:.038,h:70},{x:.888,w:.048,h:42},{x:.935,w:.032,h:60},{x:.97,w:.025,h:36}];
+  blds.forEach(b=>{
+    const bx=W()*b.x,bw=W()*b.w,by2=vy-b.h,bh=b.h;
+    const wallCol=tod==='night'?`rgba(14,22,32,.92)`:tod==='dusk'?`rgba(${100+ri(-8,8)},${80+ri(-5,5)},${65+ri(-5,5)},.82)`:
+      `rgba(${158+ri(-10,10)},${148+ri(-8,8)},${134+ri(-8,8)},.82)`;
+    ctx.fillStyle=wallCol;ctx.fillRect(bx,by2,bw,bh);
+    /* windows */
+    const rows=Math.floor(bh/13),cols=Math.max(1,Math.floor(bw/8));
+    for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
+      const lit=tod==='night'?Math.random()>.42:false;
+      ctx.fillStyle=lit?`rgba(255,220,120,.72)`:tod==='day'?`rgba(0,0,0,.22)`:tod==='dusk'?`rgba(${lit?220:20},${lit?160:15},${lit?50:10},.5)`:`rgba(0,0,0,.5)`;
+      ctx.fillRect(bx+3+c*8,by2+4+r*12,5,7);
+    }
+    /* roof */
+    ctx.fillStyle=tod==='night'?'rgba(8,14,22,.95)':tod==='dusk'?'rgba(60,40,40,.9)':`rgba(88,82,72,.85)`;
+    ctx.fillRect(bx-1,by2-4,bw+2,5);
+    /* night roof antenna */
+    if(tod==='night'&&Math.random()>.5){ctx.fillStyle='rgba(255,50,50,.7)';ctx.beginPath();ctx.arc(bx+bw/2,by2-6,2,0,Math.PI*2);ctx.fill();}
+  });
+
+  /* street lamps */
+  const poleXs=[W()*.19,W()*.38,W()*.58,W()*.77];
+  poleXs.forEach((px,pi)=>{
+    const py=vy+pi*9+14;
+    ctx.strokeStyle=`rgba(70,90,100,${.35*amb+.2})`;ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(px,py+38);ctx.lineTo(px,py);ctx.lineTo(px+16,py-7);ctx.stroke();
+    if(tod!=='day'){
+      const lit=tod==='night'?.88:.6;
+      ctx.fillStyle=`rgba(255,215,80,${lit})`;ctx.beginPath();ctx.arc(px+16,py-7,3.5,0,Math.PI*2);ctx.fill();
+      const lg=ctx.createRadialGradient(px+16,py-7,0,px+16,py-7,60);
+      lg.addColorStop(0,`rgba(255,200,60,${lit*.18})`);lg.addColorStop(1,'rgba(255,200,60,0)');
+      ctx.fillStyle=lg;ctx.beginPath();ctx.arc(px+16,py-7,60,0,Math.PI*2);ctx.fill();
+    }
+  });
+
+  /* traffic signal */
+  const sx=W()*.65,sy2=vy+22;
+  ctx.fillStyle='rgba(22,22,22,.95)';ctx.beginPath();ctx.roundRect(sx-9,sy2-3,18,44,3);ctx.fill();
+  ctx.strokeStyle='rgba(60,60,60,.8)';ctx.lineWidth=1;ctx.strokeRect(sx-9,sy2-3,18,44);
+  ['#a01818','#a06a08','#0a9040'].forEach((col,i)=>{
+    const on=i===2;
+    ctx.beginPath();ctx.arc(sx,sy2+8+i*14,5,0,Math.PI*2);ctx.fillStyle=on?col:`rgba(30,30,30,.7)`;ctx.fill();
+    if(on){const lg=ctx.createRadialGradient(sx,sy2+8+i*14,0,sx,sy2+8+i*14,11);
+      lg.addColorStop(0,`rgba(10,160,64,.45)`);lg.addColorStop(1,'rgba(10,160,64,0)');ctx.fillStyle=lg;ctx.beginPath();ctx.arc(sx,sy2+8+i*14,11,0,Math.PI*2);ctx.fill();}
+  });
+  ctx.strokeStyle='rgba(60,70,80,.4)';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(sx,sy2+41);ctx.lineTo(sx,sy2+65);ctx.stroke();
+
+  /* road surface reflection for night/rain */
+  if(tod==='night'||getWX()==='rain'){
+    const refl=ctx.createLinearGradient(0,vy,0,H()-52);
+    refl.addColorStop(0,'rgba(255,220,80,.0)');refl.addColorStop(.4,`rgba(255,220,80,${tod==='night'?.04:.02})`);refl.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=refl;const ne=roadEdge(H()-52),fe=roadEdge(vy+2);
+    ctx.beginPath();ctx.moveTo(fe.left,vy+2);ctx.lineTo(fe.right,vy+2);ctx.lineTo(ne.right,H()-52);ctx.lineTo(ne.left,H()-52);ctx.closePath();ctx.fill();
+  }
+}
+
+function drawRoadSurface(){
+  const vp=VP(),vy=vp.y,tod=getTOD();
+  /* road trapezoid */
+  const ne=roadEdge(H()-52),fe=roadEdge(vy+2);
+  const roadCol=tod==='night'?'#0d1820':tod==='dusk'?'#141e2a':'#18242e';
+  ctx.beginPath();ctx.moveTo(fe.left,vy+2);ctx.lineTo(fe.right,vy+2);ctx.lineTo(ne.right,H()-52);ctx.lineTo(ne.left,H()-52);ctx.closePath();ctx.fillStyle=roadCol;ctx.fill();
+
+  /* depth bands for texture */
+  for(let d=.05;d<1;d+=.05){const y=vy+(H()-vy-52)*d;const e=roadEdge(y);
+    ctx.fillStyle=`rgba(0,0,0,${.015+d*.025})`;ctx.fillRect(e.left,y,e.right-e.left,1);}
+
+  /* center & lane dashes */
+  [[.2,'rgba(255,200,0,.5)',true],[.37,'rgba(255,255,255,.18)',false],[.53,'rgba(255,255,255,.18)',false],[.70,'rgba(255,200,0,.5)',true]].forEach(([frac,col,center])=>{
+    for(let d=0;d<1;d+=.06){
+      const p1=laneToXY(frac,d),p2=laneToXY(frac,d+.03);
+      ctx.strokeStyle=col;ctx.lineWidth=Math.max(.5,p1.scale*(center?2.5:1.8));
+      ctx.beginPath();ctx.moveTo(p1.x,p1.y);ctx.lineTo(p2.x,p2.y);ctx.stroke();
+    }
+  });
+
   /* edge lines */
-  ctx.fillStyle='rgba(255,255,255,.18)';ctx.fillRect(0,62,W,2);
-  ctx.fillStyle='rgba(255,255,255,.08)';ctx.fillRect(0,H-3,W,2);
+  [.01,.99].forEach(frac=>{
+    ctx.strokeStyle='rgba(255,255,255,.28)';ctx.lineWidth=1.5;ctx.beginPath();
+    for(let d=0;d<=1;d+=.015){const p=laneToXY(frac,d);if(d===0)ctx.moveTo(p.x,p.y);else ctx.lineTo(p.x,p.y);}ctx.stroke();
+  });
+
   /* detection lines */
   if(gts()){
-    ctx.save();ctx.setLineDash([8,6]);ctx.lineWidth=1.5;
-    ctx.strokeStyle='rgba(50,160,240,.65)';
-    ctx.beginPath();ctx.moveTo(0,L1);ctx.lineTo(W,L1);ctx.stroke();
-    ctx.beginPath();ctx.moveTo(0,L2);ctx.lineTo(W,L2);ctx.stroke();
-    ctx.restore();
-    ctx.fillStyle='rgba(50,160,240,.6)';ctx.font='8px monospace';
-    ctx.fillText('SPEED LINE A',6,L1-3);ctx.fillText('SPEED LINE B',6,L2-3);
-    /* distance label */
-    ctx.save();ctx.fillStyle='rgba(50,160,240,.3)';ctx.font='8px monospace';
-    ctx.translate(W-10,(L1+L2)/2);ctx.rotate(-Math.PI/2);ctx.fillText('10.0 m',0,0);ctx.restore();
+    [[D1,'rgba(30,200,255,.65)','LINE A'],[D2,'rgba(30,255,160,.65)','LINE B']].forEach(([d,col,lbl])=>{
+      const y=vy+(H()-vy-52)*d,e=roadEdge(y);
+      ctx.save();ctx.setLineDash([9,6]);ctx.lineWidth=1.5;ctx.strokeStyle=col;
+      ctx.beginPath();ctx.moveTo(e.left,y);ctx.lineTo(e.right,y);ctx.stroke();ctx.restore();
+      ctx.fillStyle=col;ctx.font=`${Math.round(7+d*4)}px monospace`;ctx.textAlign='left';ctx.fillText(lbl,e.left+5,y-3);
+    });
+    /* distance marker */
+    const rx=W()*.91,y1=vy+(H()-vy-52)*D1,y2=vy+(H()-vy-52)*D2;
+    ctx.strokeStyle='rgba(255,255,255,.08)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(rx,y1);ctx.lineTo(rx,y2);ctx.stroke();
+    ctx.fillStyle='rgba(255,255,255,.2)';ctx.font='7.5px monospace';ctx.textAlign='right';ctx.fillText('10.0 m',rx-3,(y1+y2)/2+3);ctx.textAlign='left';
   }
+
+  /* pavement border */
+  ctx.fillStyle='rgba(255,255,255,.04)';ctx.fillRect(0,H()-54,W(),2);
 }
 
+function drawWeather(){
+  const wx=getWX(),tod=getTOD();
+  if(wx==='rain'){
+    const intensity=1;
+    ctx.save();ctx.strokeStyle=`rgba(140,180,220,${.18*intensity})`;ctx.lineWidth=1;
+    rainDrops.forEach(d=>{
+      d.y+=d.spd*(1+intensity*.5);d.x+=d.spd*.25;
+      if(d.y>H()){d.y=-d.len;d.x=Math.random()*W();}if(d.x>W())d.x=0;
+      ctx.beginPath();ctx.moveTo(d.x,d.y);ctx.lineTo(d.x-d.spd*.15,d.y-d.len);ctx.stroke();
+    });ctx.restore();
+    ctx.fillStyle=`rgba(60,90,130,.06)`;ctx.fillRect(0,0,W(),H());
+  }
+  if(wx==='fog'){
+    fogAlpha=Math.min(.75,fogAlpha+.003);
+    const fg=ctx.createLinearGradient(0,VP().y,0,H());
+    fg.addColorStop(0,'rgba(165,180,190,.0)');fg.addColorStop(.3,`rgba(165,180,190,${fogAlpha*.6})`);fg.addColorStop(1,`rgba(165,180,190,${fogAlpha})`);
+    ctx.globalAlpha=1;ctx.fillStyle=fg;ctx.fillRect(0,0,W(),H());
+  } else if(fogAlpha>0){fogAlpha=Math.max(0,fogAlpha-.006);}
+  if(tod==='night'){ctx.fillStyle='rgba(0,4,10,.14)';ctx.fillRect(0,0,W(),H());}
+}
+
+/* ── Vehicle drawing ── */
 function drawVehicle(v){
-  const x=Math.round(v.x),y=Math.round(v.y);
-  const hl=v.hl>0;
+  if(v.bad){
+    v.sp+=.026;
+    const sw=Math.sin(v.sp)*v.sAmt+Math.sin(v.sp*1.8)*v.sAmt*.3+Math.sin(v.sp*.55)*v.sAmt*.15;
+    v.laneFrac=Math.max(.03,Math.min(.97,v.sBase+sw));
+  }
+  const pos=laneToXY(v.laneFrac,v.depth),sc=pos.scale;
+  const bw=(v.truck?82:52)*sc,bh=(v.truck?26:18)*sc;
+  const bx=pos.x-bw/2,by=pos.y-bh/2;
+  if(bw<4||pos.y>H()-50)return;
+
+  const tod=getTOD(),hl=v.hl>0;
+
+  /* headlight glow */
+  if((tod==='night'||tod==='dusk')&&sc>.18){
+    const hx=pos.x+bw*.44,hy=pos.y;
+    const lg=ctx.createRadialGradient(hx,hy,0,hx,hy,50*sc);
+    lg.addColorStop(0,`rgba(255,235,160,${.22*sc})`);lg.addColorStop(1,'rgba(255,235,160,0)');
+    ctx.fillStyle=lg;ctx.beginPath();ctx.arc(hx,hy,50*sc,0,Math.PI*2);ctx.fill();
+  }
+
+  /* road reflection at night */
+  if(tod==='night'&&sc>.35){
+    ctx.fillStyle=`rgba(255,230,100,${.04*sc})`;
+    ctx.beginPath();ctx.ellipse(pos.x+bw*.44,pos.y+bh*.6,bw*.35,bh*.5,0,0,Math.PI*2);ctx.fill();
+  }
+
   /* shadow */
-  ctx.fillStyle='rgba(0,0,0,.2)';ctx.beginPath();ctx.ellipse(x,y+v.h/2+2,v.w*.45,3,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle=`rgba(0,0,0,${.12*sc})`;ctx.beginPath();ctx.ellipse(pos.x,by+bh+2*sc,bw*.42,3*sc,0,0,Math.PI*2);ctx.fill();
+
   /* body */
-  ctx.fillStyle=hl?'#a83030':v.color;
-  ctx.beginPath();ctx.roundRect(x-v.w/2,y-v.h/2,v.w,v.h,4);ctx.fill();
-  /* windshield */
+  ctx.fillStyle=hl?'#6e1010':v.color;ctx.beginPath();ctx.roundRect(bx,by,bw,bh,3*sc);ctx.fill();
+  /* roof highlight */
+  ctx.fillStyle='rgba(255,255,255,.05)';ctx.fillRect(bx+sc,by,bw-2*sc,bh*.28);
+
+  /* windshields */
   if(!v.truck){
-    ctx.fillStyle='rgba(120,190,240,.18)';
-    ctx.beginPath();ctx.roundRect(x-v.w/2+5,y-v.h/2+3,v.w-14,v.h*.45,2);ctx.fill();
-    ctx.fillStyle='rgba(255,255,255,.06)';ctx.fillRect(x-v.w/2+2,y-v.h/2+1,v.w-4,2);
+    ctx.fillStyle='rgba(100,155,210,.16)';ctx.beginPath();ctx.roundRect(bx+3.5*sc,by+1.8*sc,bw*.48,bh*.52,2*sc);ctx.fill();
+    ctx.fillStyle='rgba(80,135,190,.12)';ctx.beginPath();ctx.roundRect(bx+bw*.6,by+1.8*sc,bw*.28,bh*.46,sc);ctx.fill();
+    /* headlights */
+    ctx.fillStyle=`rgba(255,235,140,${.72+sc*.2})`;
+    ctx.beginPath();ctx.roundRect(bx+bw-3.5*sc,by+1.8*sc,3*sc,2.8*sc,sc);ctx.fill();
+    ctx.beginPath();ctx.roundRect(bx+bw-3.5*sc,by+bh-4.5*sc,3*sc,2.8*sc,sc);ctx.fill();
+    /* tail lights */
+    ctx.fillStyle=`rgba(200,20,20,${.68+sc*.18})`;
+    ctx.beginPath();ctx.roundRect(bx+.5*sc,by+1.8*sc,3*sc,2.8*sc,sc);ctx.fill();
+    ctx.beginPath();ctx.roundRect(bx+.5*sc,by+bh-4.5*sc,3*sc,2.8*sc,sc);ctx.fill();
   } else {
-    ctx.fillStyle='rgba(120,200,180,.15)';
-    ctx.beginPath();ctx.roundRect(x+v.w/2-16,y-v.h/2+3,12,v.h-6,2);ctx.fill();
+    ctx.fillStyle='rgba(100,175,185,.14)';ctx.beginPath();ctx.roundRect(bx+bw*.72,by+1.5*sc,bw*.22,bh*.52,sc);ctx.fill();
+    ctx.fillStyle='rgba(0,0,0,.12)';ctx.fillRect(bx+sc,by+sc,bw*.66,bh-2*sc);
+    ctx.fillStyle=`rgba(255,235,140,${.7+sc*.2})`;
+    ctx.fillRect(bx+bw-3.5*sc,by+2*sc,3*sc,3*sc);ctx.fillRect(bx+bw-3.5*sc,by+bh-5*sc,3*sc,3*sc);
+    ctx.fillStyle=`rgba(200,20,20,.65)`;
+    ctx.fillRect(bx+.5*sc,by+2*sc,3*sc,3*sc);ctx.fillRect(bx+.5*sc,by+bh-5*sc,3*sc,3*sc);
   }
-  /* lights */
-  ctx.fillStyle='rgba(255,235,140,.75)';ctx.fillRect(x+v.w/2-4,y-v.h/2+3,3,4);ctx.fillRect(x+v.w/2-4,y+v.h/2-7,3,4);
-  ctx.fillStyle='rgba(210,40,40,.65)';ctx.fillRect(x-v.w/2+1,y-v.h/2+3,3,4);ctx.fillRect(x-v.w/2+1,y+v.h/2-7,3,4);
-  /* hl box */
-  if(hl){
-    ctx.save();ctx.strokeStyle='#d63f3f';ctx.lineWidth=1.5;ctx.setLineDash([4,3]);
-    ctx.strokeRect(x-v.w/2-5,y-v.h/2-5,v.w+10,v.h+10);ctx.restore();
-    const lbl=v.hlType;ctx.font='500 8px sans-serif';
-    const tw=ctx.measureText(lbl).width+12;
-    ctx.fillStyle='rgba(180,30,30,.9)';ctx.beginPath();ctx.roundRect(x-tw/2,y-v.h/2-20,tw,13,3);ctx.fill();
-    ctx.fillStyle='#fff';ctx.textAlign='center';ctx.fillText(lbl,x,y-v.h/2-10);ctx.textAlign='left';
-  }
-  /* plate */
-  ctx.fillStyle='rgba(255,255,255,.5)';ctx.font='6px monospace';ctx.textAlign='center';ctx.fillText(v.plate,x,y+v.h/2+9);ctx.textAlign='left';
-  /* speed readout */
-  if(gts()&&v.cl2&&v.t1&&v.t2){
-    const dt=(v.t2-v.t1)/1000;if(dt>0){
-      const sp=(10/dt)*3.6,lim=gl();
-      ctx.font='700 9px monospace';ctx.textAlign='center';
-      ctx.fillStyle=sp>lim?'#ff7070':'#60d090';
-      ctx.fillText(Math.round(sp)+'km/h',x,y-v.h/2-5);ctx.textAlign='left';
+
+  /* YOLO bounding box */
+  const pad2=5*sc;
+  if(sc>.16){
+    const bcol=hl?'rgba(220,50,50,.92)':v.bad?'rgba(190,110,8,.75)':'rgba(28,140,220,.5)';
+    ctx.strokeStyle=bcol;ctx.lineWidth=Math.max(.7,sc*1.3);ctx.strokeRect(bx-pad2,by-pad2,bw+pad2*2,bh+pad2*2);
+    if(sc>.26){
+      const fs=Math.round(6.5*sc+3.5);ctx.font=`${fs}px monospace`;
+      const lbl=`V${v.id}`;const lw=ctx.measureText(lbl).width+5;
+      ctx.fillStyle=hl?'rgba(210,45,45,.88)':v.bad?'rgba(185,108,8,.82)':'rgba(26,135,215,.78)';
+      ctx.fillRect(bx-pad2,by-pad2-fs-2,lw,fs+2);
+      ctx.fillStyle='#fff';ctx.textAlign='left';ctx.fillText(lbl,bx-pad2+2,by-pad2-2);
     }
   }
-  /* EAR for bad drivers */
-  if(gtd()&&v.bad&&!v.dAlerted){
-    const ear=Math.max(0.11,0.30-v.ear*.0012).toFixed(2);
-    ctx.font='6px monospace';ctx.textAlign='center';
-    ctx.fillStyle=parseFloat(ear)<.25?'#ff8888':'rgba(255,255,255,.28)';
-    ctx.fillText('EAR:'+ear,x,y-v.h/2-16);ctx.textAlign='left';
+
+  /* violation tag */
+  if(hl&&sc>.28){
+    const fs2=Math.round(7*sc+3),tag=v.hlType,tw2=ctx.measureText(tag).width+12;
+    ctx.font=`700 ${fs2}px sans-serif`;
+    ctx.fillStyle='rgba(180,12,12,.94)';ctx.beginPath();ctx.roundRect(pos.x-tw2/2,by-pad2-fs2-5,tw2,fs2+4,2);ctx.fill();
+    ctx.fillStyle='#fff';ctx.textAlign='center';ctx.fillText(tag,pos.x,by-pad2-3);ctx.textAlign='left';
+  }
+
+  /* speed readout */
+  if(gts()&&v.measuredSpd!=null&&sc>.24){
+    const spd=v.measuredSpd,lim=gl();
+    ctx.font=`700 ${Math.round(6.5*sc+3.5)}px monospace`;ctx.textAlign='center';
+    ctx.fillStyle=spd>lim?'#ff5050':spd>lim*.9?'#ffaa28':'#38dd80';
+    ctx.fillText(Math.round(spd)+' km/h',pos.x,by-pad2-(hl?Math.round(fs2*1.4+8):4));ctx.textAlign='left';
+  }
+
+  /* EAR readout for bad drivers */
+  if(gtd()&&v.bad&&!v.dAlerted&&sc>.36){
+    const ear=Math.max(.09,.30-v.ear*.0014);
+    ctx.font=`${Math.round(5*sc+3)}px monospace`;ctx.textAlign='center';
+    ctx.fillStyle=ear<.25?'#ff6060':'rgba(255,255,255,.25)';
+    const earOffset=by-pad2-(v.measuredSpd!=null?22*sc:0)-(hl?20*sc:0)-14*sc;
+    ctx.fillText(`EAR:${ear.toFixed(2)}`,pos.x,earOffset);ctx.textAlign='left';
+  }
+
+  /* license plate */
+  if(sc>.52){
+    const pw=bw*.58,ph=bh*.26,px2=pos.x-pw/2,py2=by+bh-ph-2*sc;
+    ctx.fillStyle='#d8d8c0';ctx.beginPath();ctx.roundRect(px2,py2,pw,ph,sc);ctx.fill();
+    ctx.strokeStyle='rgba(0,0,0,.2)';ctx.lineWidth=sc;ctx.strokeRect(px2,py2,pw,ph);
+    ctx.fillStyle='#111';ctx.font=`${Math.round(4*sc+2.5)}px monospace`;ctx.textAlign='center';
+    ctx.fillText(v.plate,pos.x,py2+ph*.82);ctx.textAlign='left';
   }
 }
 
+/* ── HUD ── */
 function drawHUD(){
-  ctx.fillStyle='rgba(0,0,0,.55)';ctx.fillRect(0,0,W,22);
-  ctx.font='9px monospace';ctx.fillStyle='rgba(255,255,255,.35)';
-  const ts=new Date().toISOString().replace('T',' ').slice(0,19)+' UTC';
-  ctx.fillText(ts,8,14);
-  ctx.fillStyle='rgba(255,255,255,.15)';ctx.fillText('|',W/2-55,14);
-  ctx.fillStyle='rgba(255,255,255,.32)';ctx.fillText('VEH:'+vehs.length,W/2-45,14);
-  ctx.fillStyle='rgba(255,255,255,.15)';ctx.fillText('|',W/2+10,14);
-  ctx.fillStyle='rgba(255,255,255,.32)';ctx.fillText('LIMIT:'+gl()+'km/h',W/2+20,14);
+  const tod=getTOD();
+  /* bottom bar */
+  ctx.fillStyle='rgba(0,0,0,.48)';ctx.fillRect(0,H()-20,W(),20);
+  ctx.font='7.5px monospace';ctx.fillStyle='rgba(255,255,255,.25)';
+  ctx.fillText(
+    `VEH: ${vehs.length}   VIOLATIONS: ${vTot}   CONF ≥ 0.45   YOLOv8n   ${tod.toUpperCase()}   session: ${document.getElementById('m3').textContent}`,
+    10,H()-6);
 }
 
+function drawIdle(){
+  ctx.fillStyle='#030810';ctx.fillRect(0,0,W(),H());
+  ctx.fillStyle='rgba(255,255,255,.07)';ctx.font='12px sans-serif';ctx.textAlign='center';
+  ctx.fillText('▶  Press Start to begin simulation',W()/2,H()/2);
+  ctx.font='9px monospace';ctx.fillStyle='rgba(255,255,255,.03)';
+  ctx.fillText('AI Traffic Enforcement System  ·  Simulator v6',W()/2,H()/2+22);
+  ctx.textAlign='left';
+}
+
+/* ── Vehicle table ── */
+function updateVehicleTable(){
+  const tbody=document.getElementById('veh-tbody');if(!tbody)return;
+  document.getElementById('veh-count-lbl').textContent=vehs.length+' tracked';
+  if(!vehs.length){tbody.innerHTML='<tr><td colspan="5" class="no-data">No vehicles tracked.</td></tr>';return;}
+  tbody.innerHTML=[...vehs].sort((a,b)=>b.depth-a.depth).map(v=>{
+    const spd=v.measuredSpd!=null?v.measuredSpd:v.spd;const over=spd>gl();
+    const laneNames=['L1','L2','L3','L4','L5'];const flag=v.bad?'<span class="vt-flag">BAD</span>':'';
+    return`<tr><td style="font-family:var(--mono);color:var(--muted)">V${v.id}</td><td class="vt-plate">${v.plate}</td><td class="vt-spd ${over?'over':''}">${Math.round(spd)}</td><td style="font-family:var(--mono);color:var(--muted)">${laneNames[v.lane]||'—'}</td><td>${flag}</td></tr>`;
+  }).join('');
+}
+
+/* ── Update loop ── */
 function update(){
-  const d=gd();
-  if(running&&Math.random()<.010*d&&vehs.length<d+3)vehs.push(spawnV());
-  const lim=gl(),now=Date.now();
+  const d=gd(),now=Date.now(),lim=gl();
+  if(running&&Math.random()<.009*d&&vehs.length<d+4)vehs.push(spawnV());
   vehs.forEach(v=>{
-    v.x+=v.spd*.28/30;
-    if(v.bad){v.sp+=.044;const sw=Math.sin(v.sp)*v.sAmt+Math.sin(v.sp*2.2)*v.sAmt*.25;v.y=v.sBase+sw;v.y=Math.max(62,Math.min(278,v.y));}
-    if(v.hl>0)v.hl--;
+    v.depth+=v.spd*(.00128/60);if(v.hl>0)v.hl--;
     if(gts()){
-      if(!v.cl1&&v.x>L1){v.cl1=true;v.t1=now;}
-      if(v.cl1&&!v.cl2&&v.x>L2){v.cl2=true;v.t2=now;
-        const dt=(v.t2-v.t1)/1000;
-        if(dt>0){const sp=(10/dt)*3.6;if(sp>lim&&!v.alerted){v.alerted=true;
-          setDet(1,'fire',Math.round(sp)+'km/h');
-          trigV(v,'SPEED',Math.round(sp)+' km/h — limit '+lim+' km/h');
-          setTimeout(()=>setDet(1,'on','monitoring'),1200);}}}
+      if(!v.cl1&&v.depth>=D1){v.cl1=true;v.t1=now;}
+      if(v.cl1&&!v.cl2&&v.depth>=D2){
+        v.cl2=true;v.t2=now;const dt=(v.t2-v.t1)/1000;
+        if(dt>0){const sp=(10/dt)*3.6;v.measuredSpd=sp;
+          if(sp>lim&&!v.alerted){v.alerted=true;v.hl=110;v.hlType='SPEED';
+            setDet(1,'fire',Math.round(sp)+' km/h');
+            const snap=captureSnapshot();
+            showAlert(`⚠ SPEED  ${v.plate}  ${Math.round(sp)} km/h  (limit ${lim})`);
+            showPlateZoom(v);
+            addLog('SPEED',v.plate,`${Math.round(sp)} km/h — limit ${lim}`,sp,snap);
+            setTimeout(()=>setDet(1,'on','monitoring'),1400);}}
+      }
     }
     if(gtd()&&v.bad&&!v.dAlerted){v.ear++;
-      if(v.ear>145){v.dAlerted=true;
-        const t=Math.random()<.5?'DROWSY':'SWERVE';
-        setDet(2,'fire',t==='DROWSY'?'EAR 0.16':'±'+ri(18,28)+'px');
-        trigV(v,t,t==='DROWSY'?'EAR=0.16 — 22 frames sustained':'Swerve='+ri(85,115)+'px lateral');
-        setTimeout(()=>setDet(2,'on','monitoring'),1200);}}
-    if(gth()&&hCool<=0&&Math.random()<v.hChance){hCool=140;
-      const hz=ri(370,950),e=ri(3500,7400);
-      setDet(3,'fire',hz+'Hz');addLog('HONK',v.plate,'Energy='+e+' RMS · FFT peak='+hz+' Hz');
+      if(v.ear>120+ri(0,40)){v.dAlerted=true;v.hl=120;
+        const isDrowsy=Math.random()<.5;v.hlType=isDrowsy?'DROWSY':'SWERVE';
+        const detail=isDrowsy?`EAR=${(.10+rf(0,.04)).toFixed(2)} · ${ri(20,28)} frames`:`Swerve ±${ri(82,120)}px lateral`;
+        setDet(2,'fire',isDrowsy?'EAR alert':'swerve');
+        const snap=captureSnapshot();
+        showAlert(`⚠ ${isDrowsy?'DROWSY DRIVER':'SWERVE DETECTED'}  ${v.plate}`);
+        showPlateZoom(v);
+        addLog(isDrowsy?'DROWSY':'SWERVE',v.plate,detail,null,snap);
+        setTimeout(()=>setDet(2,'on','monitoring'),1400);}}
+    if(gth()&&hCool<=0&&Math.random()<v.hChance){hCool=ri(100,160);
+      const hz=ri(360,980),e=ri(3400,7600);
+      setDet(3,'fire',hz+' Hz');
+      showAlert(`⚠ HONKING  ${v.plate}  FFT ${hz} Hz`);
+      addLog('HONK',v.plate,`Energy ${e} RMS · FFT ${hz} Hz`);
       setTimeout(()=>setDet(3,'on','listening'),900);}
   });
   if(hCool>0)hCool--;
-  vehs=vehs.filter(v=>v.x<W+130);
+  vehs=vehs.filter(v=>v.depth<1.1);
   document.getElementById('m0').textContent=vehs.length;
-  fc++;if(running)setDet(0,'on',Math.round(52+Math.sin(fc*.08)*4)+' fps');
+  document.getElementById('m0s').textContent=vehs.length===1?'1 vehicle':'active';
+  document.getElementById('hud-veh').textContent='TRACKED: '+vehs.length;
+  document.getElementById('hud-limit').textContent='LIMIT: '+lim+' KM/H';
+  const wx=getWX(),tod=getTOD();
+  const vis=wx==='fog'?'POOR':wx==='rain'?'REDUCED':'GOOD';
+  document.getElementById('hud-env').textContent=`${tod.toUpperCase()} · ${wx.toUpperCase()} · VIS: ${vis}`;
+  fc++;const fps=Math.round(28+Math.sin(fc*.07)*1.4);
+  document.getElementById('hud-fps').textContent='FPS: '+fps;
+  if(running)setDet(0,'on',fps+' fps');
+  if(t0){const el=Math.floor((Date.now()-t0)/3000);if(el>lastRateMin){lastRateMin=el;rateH2.push(rateWindow);if(rateH2.length>20)rateH2.shift();rateWindow=0;drawRateChart();}}
+  updateVehicleTable();
 }
 
-function draw(){drawBg();vehs.forEach(v=>drawVehicle(v));drawHUD();}
-function loop(){update();draw();animId=requestAnimationFrame(loop);}
+function drawFrame(){
+  drawSky();drawScenery();drawRoadSurface();
+  [...vehs].sort((a,b)=>a.depth-b.depth).forEach(drawVehicle);
+  drawWeather();drawHUD();
+}
+function loop(){update();drawFrame();animId=requestAnimationFrame(loop);}
 
+/* ── Clock ── */
+setInterval(()=>{
+  const ts=new Date().toISOString().replace('T',' ').slice(0,19)+' UTC';
+  const el=document.getElementById('tb-ts');if(el)el.textContent=ts.slice(11);
+  const h2=document.getElementById('hud-ts2');if(h2)h2.textContent=ts;
+},1000);
+
+/* ── Sim controls ── */
 function startSim(){
-  running=true;t0=Date.now();
-  setDet(0,'on','loading...');setTimeout(()=>setDet(0,'on','30 fps'),500);
-  if(gts())setDet(1,'on','monitoring');
-  if(gtd())setDet(2,'on','monitoring');
-  if(gth())setDet(3,'on','listening');
+  running=true;t0=Date.now();vehs=[];nid=0;vTot=0;vSpd=0;logN=0;fc=0;hCool=0;
+  cntSpeed=0;cntDrowsy=0;cntSwerve=0;cntHonk=0;speedHistory=[];rateH2=new Array(20).fill(0);rateWindow=0;lastRateMin=-1;
+  speedSum=0;speedCount=0;speedMin=999;speedMax=0;snapshots=[];tickItems=[];
+  violationCSV='timestamp,type,plate,speed_kmh,detail\n';
+  document.getElementById('m1').textContent='0';document.getElementById('m2').textContent='0';document.getElementById('m0').textContent='0';
+  document.getElementById('vlog-body').innerHTML='<div class="vempty">No violations recorded yet.</div>';
+  document.getElementById('snap-grid').innerHTML='<div class="vempty" style="grid-column:span 2">Incidents appear here as they occur.</div>';
+  document.getElementById('gauge-wrap').style.display='none';
+  document.getElementById('ticker-inner').innerHTML='<span style="color:var(--dim)">Monitoring…</span>';
+  updateBarCharts();
+  setDet(0,'on','loading…');setTimeout(()=>setDet(0,'on','30 fps'),500);
+  if(gts())setDet(1,'on','monitoring');if(gtd())setDet(2,'on','monitoring');if(gth())setDet(3,'on','listening');
   uptInt=setInterval(()=>{
     const s=Math.floor((Date.now()-t0)/1000);
     document.getElementById('m3').textContent=String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
-    document.getElementById('rtime').textContent=String(Math.floor(s/3600)).padStart(2,'0')+':'+String(Math.floor((s%3600)/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
+    document.getElementById('rec-t').textContent=String(Math.floor(s/3600)).padStart(2,'0')+':'+String(Math.floor((s%3600)/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
   },1000);loop();
 }
 function stopSim(){
   running=false;cancelAnimationFrame(animId);clearInterval(uptInt);
   [0,1,2,3].forEach(i=>setDet(i,'','—'));vehs=[];
-  document.getElementById('m0').textContent='0';
-  ctx.fillStyle='#0a1520';ctx.fillRect(0,0,W,H);
-  ctx.fillStyle='rgba(255,255,255,.12)';ctx.font='12px sans-serif';ctx.textAlign='center';
-  ctx.fillText('Simulation stopped',W/2,H/2);ctx.textAlign='left';
+  document.getElementById('m0').textContent='0';drawIdle();
 }
 
 const btn=document.getElementById('startbtn');
 btn.addEventListener('click',()=>{
-  if(!running){running=true;btn.textContent='■ Stop simulation';btn.classList.add('stop');startSim();}
-  else{running=false;btn.textContent='▶ Start simulation';btn.classList.remove('stop');stopSim();}
+  if(!running){
+    running=true;
+    btn.innerHTML='<svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><rect width="3" height="10"/><rect x="7" width="3" height="10"/></svg> Stop simulation';
+    btn.classList.add('stop');startSim();
+  } else {
+    running=false;
+    btn.innerHTML='<svg width="11" height="11" viewBox="0 0 12 12" fill="currentColor"><polygon points="2,1 11,6 2,11"/></svg> Start simulation';
+    btn.classList.remove('stop');stopSim();
+  }
 });
-document.getElementById('rl').addEventListener('input',function(){document.getElementById('cl').textContent=this.value+' km/h';});
+document.getElementById('exportbtn').addEventListener('click',()=>{
+  const blob=new Blob([violationCSV],{type:'text/csv'});const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);a.download='violations_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
+});
+document.getElementById('rl').addEventListener('input',function(){document.getElementById('cl').textContent=this.value+' km/h';document.getElementById('hud-limit').textContent='LIMIT: '+this.value+' KM/H';});
 document.getElementById('rd').addEventListener('input',function(){document.getElementById('cd').textContent=this.value;});
 document.getElementById('rb').addEventListener('input',function(){document.getElementById('cb').textContent=this.value;});
-['ts','td','th'].forEach((id,i)=>{
-  document.getElementById(id).addEventListener('change',function(){
-    if(!running)return;setDet(i+1,this.checked?'on':'','');
+['ts','td','th'].forEach((id,i)=>{document.getElementById(id).addEventListener('change',function(){if(!running)return;setDet(i+1,this.checked?'on':'','');});});
+document.querySelectorAll('.tab').forEach(tab=>{
+  tab.addEventListener('click',()=>{
+    document.querySelectorAll('.tab,.tab-panel').forEach(el=>el.classList.remove('active'));
+    tab.classList.add('active');document.getElementById('tp-'+tab.dataset.tab).classList.add('active');
+    if(tab.dataset.tab==='analysis'){drawSpeedChart();drawRateChart();}
   });
 });
-ctx.fillStyle='#0a1520';ctx.fillRect(0,0,W,H);
-ctx.fillStyle='rgba(255,255,255,.12)';ctx.font='12px sans-serif';ctx.textAlign='center';
-ctx.fillText('Press ▶ Start to run the simulation',W/2,H/2);ctx.textAlign='left';
+drawIdle();
 })();
 </script>
 </body>
