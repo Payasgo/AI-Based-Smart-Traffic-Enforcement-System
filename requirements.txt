@@ -1,28 +1,28 @@
-# Core
+# Core CV & ML
 opencv-python>=4.8.0
 numpy>=1.24.0
-scipy>=1.11.0
-pandas>=2.0.0
+ultralytics>=8.0.0          # YOLOv8
 
-# Deep learning / object detection
-torch>=2.1.0
-torchvision>=0.16.0
-torchaudio>=2.1.0
-ultralytics>=8.0.0   # YOLOv8
+# Face / landmark models
+dlib>=19.24.0               # optional – drowsiness & distraction detection
+mediapipe>=0.10.0           # optional – distraction detection fallback
 
-# Face / drowsiness
-dlib>=19.24.0
-# Pre-built wheels for dlib on Windows: https://github.com/z-mahmud22/Dlib_Windows_Python3.x
+# OCR
+pytesseract>=0.3.10
 
 # Audio
 pyaudio>=0.2.13
 
-# OCR
-pytesseract>=0.3.10
-# Install Tesseract binary separately:
-#   Ubuntu:  sudo apt install tesseract-ocr
-#   macOS:   brew install tesseract
-#   Windows: https://github.com/UB-Mannheim/tesseract/wiki
+# Scipy (EAR calculation)
+scipy>=1.11.0
 
-# Visualisation
-matplotlib>=3.7.0
+# Driver assessment / voice coaching
+pyttsx3>=2.90               # offline TTS (cross-platform)
+gTTS>=2.3.2                 # optional – online TTS fallback
+
+# Dashboard
+flask>=3.0.0
+pandas>=2.0.0
+
+# Utilities
+pathlib2>=2.3.7; python_version < "3.4"
