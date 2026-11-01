@@ -58,13 +58,13 @@ class RoadRuleDetector:
                     continue
                 if state is None:
                     self._zone_state[key] = {
-                        "since": timestamp, "last": (cx, cy)
+                        "since": timestamp, "anchor": (cx, cy)
                     }
                     continue
-                lx, ly = state["last"]
-                if np.hypot(cx - lx, cy - ly) > self.stationary_px:
+                ax, ay = state["anchor"]
+                if np.hypot(cx - ax, cy - ay) > self.stationary_px:
                     state["since"] = timestamp
-                state["last"] = (cx, cy)
+                    state["anchor"] = (cx, cy)
                 dwell = (timestamp - state["since"]).total_seconds()
                 required = float(zone.get("dwell_seconds", 10.0))
                 if dwell >= required:
