@@ -80,10 +80,15 @@ class RoadRuleDetector:
                 point = tuple(map(float, info["centroid"]))
                 previous = self._previous.get((vehicle_id, rule["name"]))
                 side = self._side(point, p1, p2)
+                line_dx, line_dy = p2[0] - p1[0], p2[1] - p1[1]
+                line_length_sq = line_dx * line_dx + line_dy * line_dy
+                projection = (((point[0] - p1[0]) * line_dx
+                               + (point[1] - p1[1]) * line_dy)
+                              / line_length_sq) if line_length_sq else -1
                 if previous is not None:
                     old_side = previous
                     direction = rule.get("direction", "either")
-                    crossed = old_side * side < 0
+                    crossed = old_side * side < 0 and 0.0 <= projection <= 1.0
                     allowed = (direction == "either" or
                                (direction == "negative_to_positive"
                                 and old_side < 0 < side) or
