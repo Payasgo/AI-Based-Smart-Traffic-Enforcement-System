@@ -1,83 +1,36 @@
-name: CD - Build & Deploy
+name: CD - Deploy to Local Windows Camera Host
 
 on:
   push:
     branches:
-      - main
       - master
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: local-windows-camera-deployment
+  cancel-in-progress: false
+
 jobs:
   deploy:
-    runs-on: ubuntu-latest
-
+    runs-on: [self-hosted, windows, x64]
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          clean: false
 
-      - name: Verify Required Secrets
-        shell: bash
+      - name: Validate local deployment environment
+        shell: powershell
         run: |
-          missing=0
+          $python = Join-Path $env:GITHUB_WORKSPACE ".venv\Scripts\python.exe"
+          if (-not (Test-Path $python)) { throw "Missing .venv. Follow docs/WINDOWS_LOCAL_DEPLOYMENT.md." }
+          & $python -c "import cv2, numpy, scipy, ultralytics; print('Python runtime dependencies OK')"
+          if ($LASTEXITCODE -ne 0) { throw "Python dependencies are not ready." }
 
-          check_secret() {
-            if [ -z "$1" ]; then
-              echo "❌ Missing $2"
-              missing=1
-            else
-              echo "✅ $2 found"
-            fi
-          }
-
-          check_secret "${{ secrets.DOCKER_USERNAME }}" "DOCKER_USERNAME"
-          check_secret "${{ secrets.DOCKER_PASSWORD }}" "DOCKER_PASSWORD"
-          check_secret "${{ secrets.SERVER_IP }}" "SERVER_IP"
-          check_secret "${{ secrets.SERVER_USER }}" "SERVER_USER"
-          check_secret "${{ secrets.SERVER_SSH_KEY }}" "SERVER_SSH_KEY"
-
-          if [ $missing -eq 1 ]; then
-            exit 1
-          fi
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-
-      - name: Build and Push Docker Image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          tags: |
-            ${{ secrets.DOCKER_USERNAME }}/smart-traffic:latest
-            ${{ secrets.DOCKER_USERNAME }}/smart-traffic:${{ github.sha }}
-
-      - name: Deploy to Server
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.SERVER_IP }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          script: |
-            docker pull ${{ secrets.DOCKER_USERNAME }}/smart-traffic:latest
-
-            docker stop smart-traffic || true
-            docker rm smart-traffic || true
-
-            docker run -d \
-              --name smart-traffic \
-              --restart unless-stopped \
-              -p 5000:5000 \
-              ${{ secrets.DOCKER_USERNAME }}/smart-traffic:latest
-
-            docker image prune -f
-
-      - name: Deployment Complete
-        run: echo "✅ Deployment Successful"
+      - name: Deploy camera application
+        shell: powershell
+        run: |
+          & "$env:GITHUB_WORKSPACE\scripts\deploy-local-windows.ps1"
