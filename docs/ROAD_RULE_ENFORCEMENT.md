@@ -63,11 +63,40 @@ existing alert integration with `ENABLE_ALERTS`, an authority-approved
 pipeline writes evidence snapshots and violation rows and sends live alert
 events through the existing alert adapter.
 
+## Andhra Pradesh and Telangana deployments
+
+The deployment supports both state profiles. Select the jurisdiction explicitly
+for each deployment using the environment variable:
+
+```bash
+# Andhra Pradesh deployment
+TRAFFIC_JURISDICTION=ANDHRA_PRADESH
+
+# Telangana deployment
+TRAFFIC_JURISDICTION=TELANGANA
+```
+
+Do not infer the legal jurisdiction from the vehicle registration number: a
+vehicle registered in one state can be driven in the other. Select the state
+where the camera and alleged offence are located. Maintain separate camera
+configuration, evidence retention, authority routing and rule approval for
+each site.
+
+The official Telangana Police integrated e-Challan service is
+https://echallan.tspolice.gov.in/ and its published Motor Vehicles Act page
+states that listed penalties are indicative and subject to government
+amendments. The current AP e-challan issuing/compounding workflow and the
+latest AP notification must be confirmed directly with the AP Transport /
+Police authority before integration. This code does not submit challans to
+either government portal.
+
 ## Fines and legal workflow
 
-`FINE_SCHEDULE_INR` is intentionally empty by default. Populate it only after
-the applicable state/UT rules, offence mapping, effective dates and authorised
-fine amounts have been verified. This repository currently creates evidence
+`FINE_SCHEDULE_INR` is intentionally empty by default for both Andhra Pradesh
+and Telangana. The state profiles are deployment selectors, not verified
+penalty tables. Populate a state-specific schedule only after the applicable
+Government Order / Section 200 compounding notification, offence mapping,
+effective dates and authorised fine amounts have been verified. This repository currently creates evidence
 and reviewable violation alerts; it does not issue a legally binding challan,
 collect payment, or replace an authorised officer's verification. OCR output
 may be UNKNOWN or incorrect and must not be used as sole identity evidence.
