@@ -238,7 +238,11 @@ class PhoneUsageDetector:
         self._model = _load_yolo(config.YOLO_MODEL_PATH)
 
         # Face cascade as lightweight fallback
-        cascade_path = cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
+        from pathlib import Path
+        cascade_path = str(
+            Path(__file__).resolve().parent.parent
+            / "models" / "haarcascades" / "haarcascade_frontalface_default.xml"
+        )
         self._face_cascade = cv2.CascadeClassifier(cascade_path)
 
     # ------------------------------------------------------------------
