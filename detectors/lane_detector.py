@@ -98,16 +98,20 @@ class LaneDetector:
         left_lines, right_lines = [], []
         if lines is not None:
             for line in lines:
-                x1, y1, x2, y2 = line[0]
+                # OpenCV builds may return either (N, 1, 4) or (N, 4).
+                segment = np.asarray(line).reshape(-1)
+                if segment.size != 4:
+                    continue
+                x1, y1, x2, y2 = (int(value) for value in segment)
                 if x2 == x1:
                     continue
                 slope = (y2 - y1) / (x2 - x1)
                 if abs(slope) < 0.4:        # ignore near-horizontal
                     continue
                 if slope < 0:
-                    left_lines.append(line[0])
+                    left_lines.append((x1, y1, x2, y2))
                 else:
-                    right_lines.append(line[0])
+                    right_lines.append((x1, y1, x2, y2))
 
         left  = self._average_line(left_lines,  h) if left_lines  else None
         right = self._average_line(right_lines, h) if right_lines else None

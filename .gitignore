@@ -24,3 +24,12 @@ models/*.bz2
 .vscode/
 .idea/
 *.DS_Store
+
+# Local Windows Python environment
+.venv/
+
+# Downloaded YOLO model weights
+yolov8n.pt
+
+# Runtime-generated lesson data
+lessons/
