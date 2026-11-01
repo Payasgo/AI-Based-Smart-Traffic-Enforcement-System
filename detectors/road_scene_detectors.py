@@ -73,16 +73,9 @@ class TrafficLightDetector:
         cv2.putText(frame, f"SIGNAL: {self._state}", (10, 80),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.55, line_color, 2)
 
-        # Check vehicles crossing stop line on RED
-        if self._state == "RED":
-            for vid, info in tracked_vehicles.items():
-                _, _, _, y2 = info['bbox']
-                if y2 > stop_y and vid not in self._alerted:
-                    self._alerted.add(vid)
-                    self._handle_violation(frame, info, timestamp)
-        else:
-            self._alerted.clear()
-
+        # Stop-line crossing is handled by RoadRuleDetector, which verifies
+        # an observed crossing while RED rather than flagging vehicles already
+        # beyond the line when the signal changes.
         return frame
 
     # ------------------------------------------------------------------

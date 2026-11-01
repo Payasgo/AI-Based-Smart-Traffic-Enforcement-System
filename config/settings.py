@@ -21,6 +21,30 @@ class Settings:
     SPEED_LINE_2_Y        = 0.6
     LINE_DISTANCE_METERS  = 10.0
 
+    # ── Wrong-way vehicle detection (configure per camera view) ───────
+    # Unit vector for the permitted direction in image coordinates.
+    # Default (0, 1) means top-to-bottom; reverse/sign-adjust per camera.
+    WRONG_WAY_DIRECTION_X = 0.0
+    WRONG_WAY_DIRECTION_Y = 1.0
+    WRONG_WAY_MIN_DISPLACEMENT_PX = 30.0
+    WRONG_WAY_CONFIRM_FRAMES = 2
+    WRONG_WAY_TRACK_TIMEOUT_SECONDS = 5.0
+
+    # ── Camera-calibrated road rules ─────────────────────────────────
+    # Normalized coordinates (0..1); survey polygons/lines separately per camera.
+    # Zone example:
+    # {"name":"BUS_STOP","polygon":[[0.1,0.7],[0.3,0.7],[0.3,0.9],[0.1,0.9]],
+    #  "violation_type":"BUS_STOP_PARKING","dwell_seconds":10}
+    ROAD_RULE_ZONES = []
+    # Line example:
+    # {"name":"SOLID_LINE","start":[0.45,0.55],"end":[0.55,0.95],
+    #  "violation_type":"SOLID_LINE_CROSSING","direction":"either"}
+    ROAD_RULE_LINES = []
+    PARKING_STATIONARY_PIXELS = 5.0
+    TRAFFIC_JURISDICTION = "IN"  # Configure the applicable state/UT at deployment.
+    # Populate only after the relevant state/UT fine schedule is verified.
+    FINE_SCHEDULE_INR = {}
+
     # ── Drunk / Drowsy Driver Detection ─────────────────────────────
     EYE_AR_THRESHOLD      = 0.25
     EYE_AR_CONSEC_FRAMES  = 20

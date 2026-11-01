@@ -12,6 +12,8 @@ from datetime import datetime
 
 # ── Existing detectors ──────────────────────────────────────────────────────
 from detectors.speed_detector    import SpeedDetector
+from detectors.wrong_way_detector import WrongWayDetector
+from detectors.road_rule_detector import RoadRuleDetector
 from detectors.drunk_driver_detector import DrunkDriverDetector
 from detectors.honk_detector     import HonkDetector
 from detectors.vehicle_tracker   import VehicleTracker
@@ -61,6 +63,8 @@ class TrafficEnforcementSystem:
 
         # ── Violation detectors ─────────────────────────────────────────
         self.speed_detector    = SpeedDetector(config, self.logger, self.alert_system)
+        self.wrong_way_detector = WrongWayDetector(config, self.logger, self.alert_system)
+        self.road_rule_detector = RoadRuleDetector(config, self.logger, self.alert_system)
         self.drunk_detector    = DrunkDriverDetector(config, self.logger, self.alert_system)
         self.honk_detector     = HonkDetector(config, self.logger, self.alert_system)
 
@@ -151,8 +155,13 @@ class TrafficEnforcementSystem:
                 # ── Full pipeline ────────────────────────────────────
                 frame = self.lane_detector.process(frame, tracked_vehicles, timestamp)
                 frame = self.speed_detector.process(frame, tracked_vehicles, timestamp)
+                frame = self.wrong_way_detector.process(frame, tracked_vehicles, timestamp)
                 frame = self.drunk_detector.process(frame, tracked_vehicles, timestamp)
                 frame = self.tl_detector.process(frame, tracked_vehicles, timestamp)
+                frame = self.road_rule_detector.process(
+                    frame, tracked_vehicles, timestamp,
+                    signal_state=self.tl_detector.current_state,
+                )
                 frame = self.sign_recognizer.process(frame, tracked_vehicles, timestamp)
                 frame = self.collision_warning.process(frame, tracked_vehicles, timestamp)
                 frame = self.ped_detector.process(frame, tracked_vehicles, timestamp)
