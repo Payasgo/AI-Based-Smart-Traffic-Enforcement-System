@@ -70,8 +70,8 @@ def test_solid_line_crossing_only_in_configured_direction():
     detector, _, alerts = setup()
     frame = np.zeros((200, 200, 3), dtype=np.uint8)
     now = datetime(2026, 1, 1, 12)
-    detector.process(frame.copy(), vehicle(40, 100), now)
-    detector.process(frame.copy(), vehicle(60, 100), now + timedelta(seconds=1))
+    detector.process(frame.copy(), vehicle(80, 100), now)
+    detector.process(frame.copy(), vehicle(120, 100), now + timedelta(seconds=1))
     assert len(alerts.events) == 1
     assert alerts.events[0][0] == "SOLID_LINE_CROSSING"
 
@@ -94,3 +94,13 @@ def test_vehicle_already_beyond_stop_line_is_not_flagged_on_red():
     detector.process(frame.copy(), vehicle(100, 185), now + timedelta(seconds=1),
                      signal_state="RED")
     assert not any(event[0] == "RED_LIGHT" for event in alerts.events)
+
+def test_line_extension_outside_segment_does_not_trigger():
+    detector, _, alerts = setup()
+    frame = np.zeros((200, 200, 3), dtype=np.uint8)
+    now = datetime(2026, 1, 1, 12)
+    # Cross the infinite vertical line's extension, but below the configured
+    # finite segment (the segment ends at y=180).
+    detector.process(frame.copy(), vehicle(80, 195), now)
+    detector.process(frame.copy(), vehicle(120, 195), now + timedelta(seconds=1))
+    assert not any(event[0] == "SOLID_LINE_CROSSING" for event in alerts.events)
