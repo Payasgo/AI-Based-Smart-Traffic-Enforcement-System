@@ -37,7 +37,7 @@ class Config:
         "start": [0.5, 0.1],
         "end": [0.5, 0.9],
         "violation_type": "SOLID_LINE_CROSSING",
-        "direction": "negative_to_positive",
+        "direction": "positive_to_negative",
     }]
     PARKING_STATIONARY_PIXELS = 5
     TRAFFIC_STOP_LINE_Y = 0.7
