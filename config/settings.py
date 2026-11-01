@@ -30,6 +30,23 @@ class Settings:
     WRONG_WAY_CONFIRM_FRAMES = 2
     WRONG_WAY_TRACK_TIMEOUT_SECONDS = 5.0
 
+    # ── State / UT deployment profile ───────────────────────────────
+    # Set TRAFFIC_JURISDICTION=ANDHRA_PRADESH or TELANGANA per camera/site.
+    # Do not infer jurisdiction from a vehicle registration prefix.
+    TRAFFIC_JURISDICTION = os.getenv("TRAFFIC_JURISDICTION", "TELANGANA").upper()
+    SUPPORTED_JURISDICTIONS = {
+        "ANDHRA_PRADESH": {
+            "state_name": "Andhra Pradesh",
+            "state_code": "AP",
+            "fine_schedule_verified": False,
+        },
+        "TELANGANA": {
+            "state_name": "Telangana",
+            "state_code": "TG",
+            "fine_schedule_verified": False,
+        },
+    }
+
     # ── Camera-calibrated road rules ─────────────────────────────────
     # Normalized coordinates (0..1); survey polygons/lines separately per camera.
     # Zone example:
