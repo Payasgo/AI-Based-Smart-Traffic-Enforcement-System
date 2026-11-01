@@ -17,5 +17,5 @@ jobs:
     - run: |
         python -m pip install -U pip
         if [ -f requirements-ci.txt ]; then pip install -r requirements-ci.txt; else pip install -r requirements.txt; fi
-    - run: pytest || true
+    - run: pytest -v
     - run: docker build -t smart-traffic .
