@@ -172,7 +172,12 @@ class SpeedDetector:
             if x2 <= x1 or y2 <= y1:
                 return "UNKNOWN"
 
-            roi = frame[y1:y2, x1:x2]
+            # Keep the lower-vehicle ROI as a fallback only. A dedicated
+            # plate detector is still required for dependable ANPR.
+            plate_y1 = y1 + int((y2 - y1) * 0.65)
+            roi = frame[plate_y1:y2, x1:x2]
+            if roi.size == 0:
+                return "UNKNOWN"
             gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
             _, thresh = cv2.threshold(
                 gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU
