@@ -1,0 +1,46 @@
+name: Build Windows installer
+
+on:
+  push:
+    branches:
+      - docs/add-mit-license-kranthi
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-installer:
+    runs-on: windows-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Prepare installer source
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force package-source, dist | Out-Null
+          Get-ChildItem -Force | Where-Object {
+            $_.Name -notin @(".git", ".github", ".venv", "venv", "dist", "package-source", "yolov8n.pt", "runs", "logs", "evidence", "lessons")
+          } | Copy-Item -Destination package-source -Recurse -Force
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup --yes --no-progress
+
+      - name: Compile setup wizard
+        shell: pwsh
+        run: |
+          $compiler = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $compiler)) { throw "Inno Setup compiler not found." }
+          & $compiler installer\AI-Smart-Traffic-Enforcement.iss
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup compilation failed." }
+          Get-Item dist\AI-Smart-Traffic-Enforcement-Setup.exe | Format-List Name,Length
+
+      - name: Upload Windows installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: AI-Smart-Traffic-Enforcement-Windows-Installer
+          path: dist/AI-Smart-Traffic-Enforcement-Setup.exe
+          if-no-files-found: error
+          retention-days: 14
