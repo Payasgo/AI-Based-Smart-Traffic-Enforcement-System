@@ -270,6 +270,165 @@ models/
 
 ---
 
+## Windows 10 deployment (USB webcam — tested setup)
+
+The project has also been started successfully on **Windows 10** with **Python 3.11 (64-bit)**, a USB webcam, an Intel/AMD integrated-graphics system, YOLOv8n, and MediaPipe FaceMesh. The steps below document that tested local setup. A successful startup confirms that the camera and core components initialize; it does **not** establish traffic-enforcement accuracy or production readiness.
+
+### 1. Install prerequisites
+
+1. Install **Python 3.11 (64-bit)** from https://www.python.org/downloads/release/python-3110/.
+2. During installation, enable **Add Python to PATH**.
+3. Install **Git for Windows** and use Git Bash for the commands below.
+4. Connect your USB webcam.
+
+Open Git Bash and verify Python 3.11 is available:
+
+```bash
+py -3.11 --version
+```
+
+Expected: `Python 3.11.x`. If `py -3.11` is not found, install Python 3.11 and reopen Git Bash.
+
+### 2. Clone the repository and create the virtual environment
+
+```bash
+git clone https://github.com/Payasgo/AI-Based-Smart-Traffic-Enforcement-System.git
+cd AI-Based-Smart-Traffic-Enforcement-System
+
+py -3.11 -m venv .venv
+source .venv/Scripts/activate
+python --version
+```
+
+The prompt should show `(.venv)`. In Git Bash, use `source .venv/Scripts/activate`. In Windows PowerShell use `.venv\\Scripts\\Activate.ps1`; in Command Prompt use `.venv\\Scripts\\activate.bat`.
+
+Whenever you open a new terminal, change to the project directory and activate the environment again.
+
+### 3. Install Windows Python dependencies
+
+Upgrade the installer tools:
+
+```bash
+python -m pip install --upgrade pip setuptools wheel
+```
+
+Install the Windows dependency set:
+
+```bash
+python -m pip install -r requirements-windows.txt
+```
+
+The Windows requirements pin the tested computer-vision versions:
+
+- NumPy 1.26.4
+- OpenCV contrib 4.11.0.86
+- MediaPipe 0.10.21
+- Pandas 2.2.3
+- Ultralytics 8.4.197
+
+The remaining packages cover SciPy, OCR, voice output, and the Flask dashboard. Optional packages are listed separately in `requirements-windows-optional.txt`.
+
+**OpenCV dependency note:** In the tested environment, `cv2` imports and the application starts with `opencv-contrib-python==4.11.0.86`. However, `pip check` reports that the installed Ultralytics metadata requests the separate `opencv-python` distribution. Both distributions provide the same `cv2` namespace, so do not install both blindly or repeatedly switch packages just to hide the metadata warning. The working environment was verified by importing OpenCV, NumPy, Pandas, MediaPipe, Ultralytics, and SciPy and by opening the webcam. Dependency metadata cleanup remains a known item.
+
+Verify the core imports:
+
+```bash
+python -c "import cv2, numpy, pandas, mediapipe as mp, ultralytics, scipy; print('ALL CORE IMPORTS OK'); print('OpenCV:', cv2.__version__); print('NumPy:', numpy.__version__); print('MediaPipe:', mp.__version__); print('YOLO:', ultralytics.__version__)"
+```
+
+### 4. Check the USB webcam
+
+With the virtual environment active, run:
+
+```bash
+python -c "import cv2; c=cv2.VideoCapture(0); print('Camera available:', c.isOpened()); c.release()"
+```
+
+Expected: `Camera available: True`.
+
+If it prints `False`, close other applications using the camera, check Windows camera privacy permissions, reconnect the webcam, and try another camera index such as `1`.
+
+### 5. AI model and face-detection files
+
+- **YOLOv8n:** Ultralytics downloads `yolov8n.pt` automatically on the first application run. The downloaded weight file is local and is intentionally excluded from Git.
+- **Face cascade:** The Windows-tested setup uses the tracked file `models/haarcascades/haarcascade_frontalface_default.xml`. The detector loads it from the project directory.
+- **dlib landmark model:** dlib is optional. The Windows test machine did not have dlib installed, so dlib-based advanced drowsiness functionality is limited. The helper `python models/download_models.py` attempted to download the dlib landmark archive but failed certificate validation in that environment. Do not disable SSL verification to work around this. Skip the optional dlib model unless you specifically need that feature and can obtain the model securely from its official source.
+- **MediaPipe:** The tested version was 0.10.21, which provides the `solutions` API and loaded FaceMesh successfully.
+
+### 6. Optional audio and dlib features
+
+Install optional dependencies only if you need the corresponding features:
+
+```bash
+python -m pip install -r requirements-windows-optional.txt
+```
+
+- PyAudio enables microphone-based honk detection. Without it, the application warns that honk detection is disabled; the other modules can continue.
+- dlib enables the optional dlib landmark-based facial analysis. Its Windows installation may require compatible prebuilt wheels or a C++ build toolchain. It is not required for the tested MediaPipe FaceMesh startup.
+
+### 7. Start the live camera
+
+From the repository root, with `(.venv)` active:
+
+```bash
+python main.py --source 0
+```
+
+The default USB webcam is camera index `0`. The YOLO model may download on first run. The application should report that the video source opened and show the live detection window. Press `q` in the window to stop.
+
+For headless operation (for example, a machine without a display):
+
+```bash
+python main.py --source 0 --no-display
+```
+
+To use a recorded video instead:
+
+```bash
+python main.py --source road_footage.mp4
+```
+
+### 8. Windows troubleshooting from the tested setup
+
+| Message or symptom | Meaning / action |
+|---|---|
+| `No module named dlib` | Optional dlib functionality is unavailable; the core application can still start. |
+| `PyAudio not installed. Honk detection disabled.` | Audio honk detection is off; install the optional requirements if needed. |
+| MediaPipe `solutions` API missing | Use the tested `mediapipe==0.10.21` version in the Windows environment. |
+| Haar cascade cannot be opened | Confirm `models/haarcascades/haarcascade_frontalface_default.xml` exists in the repository. |
+| Lane detector cannot unpack a Hough line | The Windows branch includes handling for both OpenCV Hough line array shapes. Update to the branch containing that fix. |
+| TensorFlow Lite XNNPACK or inference-feedback warnings | These appeared during successful startup and were non-fatal in the tested run. |
+| `pip check` reports Ultralytics wants `opencv-python` | See the OpenCV dependency note above. Core imports and camera startup were successful despite this metadata warning. |
+
+### 9. Verify startup and run tests
+
+Core import check:
+
+```bash
+python -c "import cv2, numpy, scipy, ultralytics, mediapipe, pandas; print('CORE DEPENDENCIES INSTALLED SUCCESSFULLY')"
+```
+
+Run the project tests:
+
+```bash
+python -m pip install pytest
+python -m pytest tests/ -v
+```
+
+A successful camera startup is only an installation check. Before any real-world enforcement use, test the detectors on representative road footage, calibrate each camera, validate false positives and false negatives, and require authorized human review.
+
+### 10. Keep local runtime files out of Git
+
+The Windows development setup creates local files that should not be committed:
+
+- `.venv/` — Python virtual environment
+- `yolov8n.pt` — downloaded YOLO weights
+- `lessons/` — generated lesson/session JSON files
+
+These paths are excluded in `.gitignore`. Evidence images and runtime logs should also be handled according to your deployment's retention and privacy requirements.
+
+---
+
 ### Step 7 — (Optional but recommended) Calibrate your camera
 
 Accurate speed measurement requires knowing how many pixels correspond to one real-world metre. Without calibration, the default `PIXELS_PER_METER = 8.0` in `settings.py` is a rough estimate that will be inaccurate for your specific camera and mounting angle.
