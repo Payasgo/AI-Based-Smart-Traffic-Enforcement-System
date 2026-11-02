@@ -1,0 +1,33 @@
+name: Build deployment ZIP
+
+on:
+  push:
+    branches:
+      - docs/add-mit-license-kranthi
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Create deployment package
+        run: |
+          mkdir -p dist
+          zip -r dist/AI-Based-Smart-Traffic-Enforcement-System-Windows-Deployment.zip . \
+            -x ".git/*" ".github/*" ".venv/*" "venv/*" "__pycache__/*" \
+               "*.pyc" "yolov8n.pt" "runs/*" "logs/*" "evidence/*" \
+               "lessons/*" "dist/*"
+
+      - name: Upload deployment ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: AI-Based-Smart-Traffic-Enforcement-System-Windows-Deployment
+          path: dist/AI-Based-Smart-Traffic-Enforcement-System-Windows-Deployment.zip
+          if-no-files-found: error
+          retention-days: 14
