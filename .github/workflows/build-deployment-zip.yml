@@ -18,11 +18,12 @@ jobs:
 
       - name: Create deployment package
         run: |
-          mkdir -p dist
-          zip -r dist/AI-Based-Smart-Traffic-Enforcement-System-Windows-Deployment.zip . \
+          zip -r "$RUNNER_TEMP/AI-Based-Smart-Traffic-Enforcement-System-Windows-Deployment.zip" . \
             -x ".git/*" ".github/*" ".venv/*" "venv/*" "__pycache__/*" \
                "*.pyc" "yolov8n.pt" "runs/*" "logs/*" "evidence/*" \
                "lessons/*" "dist/*"
+          mkdir -p dist
+          mv "$RUNNER_TEMP/AI-Based-Smart-Traffic-Enforcement-System-Windows-Deployment.zip" dist/
 
       - name: Upload deployment ZIP
         uses: actions/upload-artifact@v4
