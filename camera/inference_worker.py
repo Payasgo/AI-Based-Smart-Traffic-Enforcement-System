@@ -61,6 +61,8 @@ class CameraInferenceWorker:
             raise TimeoutError(f"Inference worker {self.camera_id} did not stop")
 
     def _publish(self, item):
+        if self.on_result is not None:
+            self.on_result(item)
         try:
             self.results.put_nowait(item)
         except queue.Full:
@@ -72,8 +74,6 @@ class CameraInferenceWorker:
                 self.results.put_nowait(item)
             except queue.Full:
                 pass
-        if self.on_result is not None:
-            self.on_result(item)
 
     def _run(self):
         while not self._stop.is_set():
