@@ -11,6 +11,8 @@ class FramePacket:
     frame: object
     sequence: int
 
+_UNSET = object()
+
 class CameraStream:
     def __init__(self, config, capture_factory=None):
         self.config = config
@@ -55,10 +57,10 @@ class CameraStream:
         if self._thread and self._thread.is_alive(): self._thread.join(timeout)
         if self._thread and self._thread.is_alive(): raise TimeoutError(f"Camera {self.config.camera_id} did not stop")
 
-    def _status(self, opened=None, error=None):
+    def _status(self, opened=None, error=_UNSET):
         with self._lock:
             if opened is not None: self._opened = opened
-            self._last_error = error
+            if error is not _UNSET: self._last_error = error
 
     def _publish(self, packet):
         try: self._frames.put_nowait(packet)
