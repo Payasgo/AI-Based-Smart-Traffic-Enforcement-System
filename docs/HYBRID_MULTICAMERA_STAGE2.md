@@ -4,7 +4,7 @@ Stage 2 adds a separate inference worker for each configured camera. Each worker
 
 ## Run
 
-The current CLI remains backward compatible. Stage 2 can be launched through the multi-camera runner entry point after the CLI integration in the next incremental change. Configure camera sources in config/cameras.example.json; camera indices 0/1/2 are examples only and must be checked on the target PC.
+The current CLI remains backward compatible. Run `python main.py --multi-camera-config config/cameras.example.json` to launch independent camera workers. Press `q` to stop when display is enabled; use `--no-display` for headless operation. Configure camera sources in the JSON file; camera indices 0/1/2 are examples only and must be checked on the target PC. The original `python main.py --source 0` command still runs the full legacy single-camera detector pipeline.
 
 ## Resource considerations
 
