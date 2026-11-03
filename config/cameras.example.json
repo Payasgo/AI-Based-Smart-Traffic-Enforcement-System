@@ -1,0 +1,7 @@
+{
+  "cameras": [
+    {"camera_id": "CAM_FRONT", "source": 0, "role": "front", "location_id": "junction-01", "enabled": true, "width": 1280, "height": 720, "fps": 15, "reconnect": true},
+    {"camera_id": "CAM_REAR", "source": 1, "role": "rear", "location_id": "junction-01", "enabled": true, "width": 1280, "height": 720, "fps": 15, "reconnect": true},
+    {"camera_id": "CAM_OVERVIEW", "source": 2, "role": "overview", "location_id": "junction-01", "enabled": true, "width": 1280, "height": 720, "fps": 15, "reconnect": true}
+  ]
+}

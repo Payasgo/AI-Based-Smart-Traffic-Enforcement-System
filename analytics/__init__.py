@@ -1,0 +1,1 @@
+"""Camera-independent analytics primitives."""
