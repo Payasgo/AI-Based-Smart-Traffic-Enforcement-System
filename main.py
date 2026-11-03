@@ -37,6 +37,7 @@ from detectors.driver_assessment import (
 from utils.evidence_logger import EvidenceLogger
 from utils.alert_system    import AlertSystem
 from config.settings       import Settings
+from camera.multi_camera_runner import MultiCameraRunner
 
 
 class TrafficEnforcementSystem:
@@ -228,6 +229,8 @@ class TrafficEnforcementSystem:
 # ─────────────────────────────────────────────────────────────────────────────
 def parse_args():
     parser = argparse.ArgumentParser(description="AI Traffic Enforcement System")
+    parser.add_argument("--multi-camera-config", type=str, default=None,
+                        help="Run independent camera pipelines from a JSON camera configuration")
     parser.add_argument("--source",      type=str,   default="0",
                         help="Video source: camera index (0,1) or video file path")
     parser.add_argument("--speed-limit", type=float, default=60.0,
@@ -268,8 +271,34 @@ if __name__ == "__main__":
         dash_thread.start()
         print(f"[DASHBOARD] Running at http://localhost:{args.dash_port}")
 
-    system = TrafficEnforcementSystem(config)
-    try:
-        system.start()
-    except KeyboardInterrupt:
-        system.stop()
+    if args.multi_camera_config:
+        runner = MultiCameraRunner.from_json(args.multi_camera_config)
+        print(f"[INFO] Starting {len(runner.workers)} independent camera inference workers...")
+        try:
+            runner.start()
+            while True:
+                results = runner.read_results(timeout=0.02)
+                for camera_id, result in results.items():
+                    frame = result.frame
+                    cv2.putText(frame, f"{camera_id} | tracks: {len(result.tracked_vehicles)}",
+                                (10, 28), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+                    if config.SHOW_DISPLAY:
+                        cv2.imshow(f"Traffic Monitor - {camera_id}", frame)
+                if config.SHOW_DISPLAY and (cv2.waitKey(1) & 0xFF) == ord("q"):
+                    break
+                if not config.SHOW_DISPLAY and not results:
+                    time.sleep(0.01)
+                if not any(worker.is_running for worker in runner.workers.values()):
+                    break
+        except KeyboardInterrupt:
+            print("[INFO] Multi-camera shutdown requested.")
+        finally:
+            runner.stop()
+            if config.SHOW_DISPLAY:
+                cv2.destroyAllWindows()
+    else:
+        system = TrafficEnforcementSystem(config)
+        try:
+            system.start()
+        except KeyboardInterrupt:
+            system.stop()
