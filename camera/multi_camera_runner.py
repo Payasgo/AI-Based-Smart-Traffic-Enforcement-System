@@ -8,7 +8,7 @@ from detectors.vehicle_tracker import VehicleTracker
 
 class MultiCameraRunner:
     def __init__(self, camera_manager, tracker_factory=VehicleTracker,
-                 result_queue_size=2, enable_detection_pipeline=True,
+                 result_queue_size=2, enable_detection_pipeline=False,
                  pipeline_factory=None):
         self.camera_manager = camera_manager
         self.workers = {}
