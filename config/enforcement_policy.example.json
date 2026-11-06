@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "deployment_mode": "SHADOW",
+  "jurisdictions": {
+    "TELANGANA": {
+      "enabled": false,
+      "repeat_offence_threshold": 5,
+      "repeat_offence_window_days": 365,
+      "threshold_is_review_trigger_only": true,
+      "approved_qualifying_offence_types": [],
+      "challan_integration_enabled": false,
+      "licence_order_source": "AUTHORITY_SIGNED_IMPORT_ONLY",
+      "vehicle_detention_automation_enabled": false
+    },
+    "ANDHRA_PRADESH": {
+      "enabled": false,
+      "repeat_offence_threshold": 5,
+      "repeat_offence_window_days": 365,
+      "threshold_is_review_trigger_only": true,
+      "approved_qualifying_offence_types": [],
+      "challan_integration_enabled": false,
+      "licence_order_source": "AUTHORITY_SIGNED_IMPORT_ONLY",
+      "vehicle_detention_automation_enabled": false
+    }
+  },
+  "safeguards": {
+    "require_final_adjudication_for_repeat_count": true,
+    "exclude_open_disputes": true,
+    "require_verified_driver_identity_for_licence_match": true,
+    "never_infer_driver_from_registered_owner": true,
+    "require_official_licence_order": true,
+    "require_officer_and_legal_basis_for_vehicle_detention": true,
+    "ai_may_only_create_review_alerts": true
+  },
+  "note": "Example only. Keep disabled until each State's competent authority and legal counsel approve policy, data access, procedure and integrations."
+}
