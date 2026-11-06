@@ -41,6 +41,10 @@ def behaviour_pipeline(calibration=None, indicator_classifier=None, ttc_estimato
     obj.indicator_classifier = indicator_classifier
     obj.ttc_estimator = ttc_estimator
     obj.lane_polygons = tuple((calibration or {}).get("lane_polygons", ()))
+    obj._lane_centers = {
+        lane["lane_id"]: sum(point[0] for point in lane["polygon"]) / len(lane["polygon"])
+        for lane in obj.lane_polygons
+    }
     return obj
 
 
