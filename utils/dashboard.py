@@ -467,22 +467,40 @@ def create_app(csv_path: str, refresh: float = 5.0, username=None, password=None
     app   = Flask(__name__)
     username = username if username is not None else os.getenv('DASHBOARD_USERNAME')
     password = password if password is not None else os.getenv('DASHBOARD_PASSWORD')
+    users_json = os.getenv('DASHBOARD_USERS_JSON', '').strip()
+    try:
+        users = json.loads(users_json) if users_json else {}
+    except json.JSONDecodeError as exc:
+        cache.stop()
+        raise RuntimeError('DASHBOARD_USERS_JSON must be valid JSON') from exc
+    if users and (not isinstance(users, dict) or any(not isinstance(v, dict) or not v.get('password') or v.get('role') not in {'administrator', 'reviewer', 'readonly'} for v in users.values())):
+        cache.stop()
+        raise RuntimeError('DASHBOARD_USERS_JSON entries require password and role administrator/reviewer/readonly')
     if bool(username) != bool(password):
         cache.stop()
         raise RuntimeError('Set both DASHBOARD_USERNAME and DASHBOARD_PASSWORD, or neither')
 
     @app.before_request
     def require_dashboard_auth():
-        if not username:
-            return None  # Localhost-only mode; main() prevents unsafe network binding.
         auth = request.authorization
         supplied_user = auth.username if auth else ''
         supplied_password = auth.password if auth else ''
-        user_ok = hmac.compare_digest(str(supplied_user), str(username))
-        password_ok = hmac.compare_digest(str(supplied_password), str(password))
-        if not (user_ok and password_ok):
+        if users:
+            account = users.get(supplied_user, {})
+            valid = bool(account) and hmac.compare_digest(str(supplied_password), str(account.get('password', '')))
+            role = account.get('role', 'readonly')
+        elif username:
+            valid = hmac.compare_digest(str(supplied_user), str(username)) and hmac.compare_digest(str(supplied_password), str(password))
+            role = os.getenv('DASHBOARD_ROLE', 'reviewer').strip().lower()
+        else:
+            valid = True
+            role = 'administrator'
+            supplied_user = 'local-operator'
+        if not valid:
             return Response('Authentication required', 401,
                             {'WWW-Authenticate': 'Basic realm="Traffic Dashboard"'})
+        request.environ['dashboard.user'] = supplied_user
+        request.environ['dashboard.role'] = role
         return None
 
     @app.route("/")
@@ -516,9 +534,8 @@ def create_app(csv_path: str, refresh: float = 5.0, username=None, password=None
             from urllib.parse import urlsplit
             if urlsplit(origin).netloc != request.host:
                 return jsonify({"error": "Cross-origin review request rejected"}), 403
-        auth = request.authorization
-        reviewer = auth.username if auth else "local-operator"
-        role = os.getenv("DASHBOARD_ROLE", "reviewer").strip().lower()
+        reviewer = request.environ.get('dashboard.user', 'local-operator')
+        role = request.environ.get('dashboard.role', 'readonly')
         if role not in {"administrator", "reviewer"}:
             return jsonify({"error": "This account cannot review evidence"}), 403
         try:
@@ -557,10 +574,11 @@ def main():
         loopback = args.host.lower() == 'localhost'
     has_user = bool(os.getenv('DASHBOARD_USERNAME'))
     has_password = bool(os.getenv('DASHBOARD_PASSWORD'))
+    has_users = bool(os.getenv('DASHBOARD_USERS_JSON'))
     if has_user != has_password:
         parser.error('Set both DASHBOARD_USERNAME and DASHBOARD_PASSWORD')
-    if not loopback and not (has_user and has_password):
-        parser.error('Non-loopback dashboard binding requires DASHBOARD_USERNAME and DASHBOARD_PASSWORD')
+    if not loopback and not ((has_user and has_password) or has_users):
+        parser.error('Non-loopback dashboard binding requires DASHBOARD_USERS_JSON or DASHBOARD_USERNAME and DASHBOARD_PASSWORD')
 
     print(f"[DASHBOARD] Starting on http://{args.host}:{args.port}")
     print(f"[DASHBOARD] Watching: {args.log}")
