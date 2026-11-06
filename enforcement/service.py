@@ -182,3 +182,20 @@ class EnforcementService:
               (now(),release_order_ref,subject,oid))
             self.audit(c,r["jurisdiction"],subject,role,"VEHICLE_RELEASE_RECORDED","vehicle_detention",oid,{"ref":release_order_ref})
         return {"detention_id":oid,"status":"RELEASED"}
+
+    def resolve_dispute(self,cid,dispute_ref,outcome,resolution_ref,actor):
+        subject,role=self.require(actor,ADJUDICATOR)
+        if outcome not in ("UPHELD","REJECTED","WITHDRAWN") or not resolution_ref:
+            raise EnforcementError("A supported dispute outcome and official resolution reference are required.")
+        with self.store.transaction() as c:
+            r=c.execute("SELECT * FROM challans WHERE challan_id=?",(cid,)).fetchone()
+            if not r: raise EnforcementError("Challan not found.")
+            d=c.execute("SELECT * FROM disputes WHERE challan_id=? AND reference=?",(cid,dispute_ref)).fetchone()
+            if not d or d["status"]!="OPEN": raise EnforcementError("Open dispute not found.")
+            c.execute("UPDATE disputes SET status=?,resolved_at=?,resolution_ref=? WHERE dispute_id=?",
+                      (outcome,now(),resolution_ref,d["dispute_id"]))
+            new_status="DISMISSED" if outcome=="UPHELD" else "ISSUED"
+            c.execute("UPDATE challans SET status=? WHERE challan_id=?",(new_status,cid))
+            self.audit(c,r["jurisdiction"],subject,role,"DISPUTE_RESOLVED","challan",cid,
+                       {"dispute_ref":dispute_ref,"outcome":outcome,"resolution_ref":resolution_ref})
+        return {"challan_id":cid,"dispute_ref":dispute_ref,"status":outcome,"challan_status":new_status}
