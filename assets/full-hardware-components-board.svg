@@ -7,9 +7,9 @@
  <linearGradient id="metal" x2="0" y2="1"><stop stop-color="#dce5ec"/><stop offset=".45" stop-color="#8195a7"/><stop offset="1" stop-color="#34485c"/></linearGradient>
  <linearGradient id="black" x2="0" y2="1"><stop stop-color="#46596b"/><stop offset="1" stop-color="#111d2a"/></linearGradient>
  <linearGradient id="lens"><stop stop-color="#071421"/><stop offset=".5" stop-color="#48a6b8"/><stop offset="1" stop-color="#101f35"/></linearGradient>
- <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="9" stdDeviation="9" flood-color="#000" flood-opacity=".35"/></filter>
+
  <style>
- .title{font:700 48px Arial;fill:#fff}.subtitle{font:22px Arial;fill:#b9cde0}.heading{font:700 25px Arial;fill:#fff}.desc{font:18px Arial;fill:#d6e3ee}.spec{font:16px Arial;fill:#9fc1d6}.tag{font:700 15px Arial;fill:#071827}.small{font:15px Arial;fill:#bed0df}.card{fill:url(#card);stroke:#456783;stroke-width:2;rx:22}.wire{stroke:#58c8c3;stroke-width:5;fill:none;stroke-linecap:round;stroke-linejoin:round}.muted{stroke:#8ca8bd;stroke-width:4;fill:none;stroke-linecap:round}
+ .title{font:700 48px Arial;fill:#fff}.subtitle{font:22px Arial;fill:#b9cde0}.heading{font:700 25px Arial;fill:#fff}.desc{font:18px Arial;fill:#d6e3ee}.spec{font:16px Arial;fill:#9fc1d6}.tag{font:700 15px Arial;fill:#071827}.small{font:15px Arial;fill:#bed0df}.card{fill:url(#card);stroke:#456783;stroke-width:2}.wire{stroke:#58c8c3;stroke-width:5;fill:none;stroke-linecap:round;stroke-linejoin:round}.muted{stroke:#8ca8bd;stroke-width:4;fill:none;stroke-linecap:round}
  </style>
 </defs>
 <rect width="1600" height="2200" fill="url(#bg)"/>
@@ -18,7 +18,7 @@
 <rect x="70" y="170" width="1460" height="70" rx="16" fill="#244e68" stroke="#59c7c3" stroke-width="2"/>
 <text x="800" y="214" text-anchor="middle" class="heading">CAMERAS → PoE NETWORK → AI WORKSTATION → EVIDENCE STORAGE → OPERATOR REVIEW</text>
 <!-- camera cards -->
-<g filter="url(#shadow)">
+<g>
 <rect x="70" y="280" width="460" height="390" class="card"/>
 <rect x="570" y="280" width="460" height="390" class="card"/>
 <rect x="1070" y="280" width="460" height="390" class="card"/>
@@ -65,7 +65,7 @@
 <text x="1300" y="620" text-anchor="middle" class="spec">4K • optical zoom • high dynamic range</text>
 <rect x="1195" y="636" width="210" height="25" rx="12" fill="#62d1c4"/><text x="1300" y="654" text-anchor="middle" class="tag">QTY 2</text>
 <!-- compute row -->
-<g filter="url(#shadow)">
+<g>
 <rect x="70" y="710" width="700" height="440" class="card"/>
 <rect x="800" y="710" width="730" height="440" class="card"/>
 </g>
@@ -100,7 +100,7 @@
 <text x="1165" y="1070" text-anchor="middle" class="spec">Calculated power budget + 25–30% headroom</text>
 <text x="1165" y="1100" text-anchor="middle" class="spec">10 GbE / SFP+ uplink as required</text>
 <!-- infrastructure cards -->
-<g filter="url(#shadow)">
+<g>
 <rect x="70" y="1190" width="460" height="390" class="card"/>
 <rect x="570" y="1190" width="460" height="390" class="card"/>
 <rect x="1070" y="1190" width="460" height="390" class="card"/>
@@ -136,7 +136,7 @@
 <text x="1300" y="1540" text-anchor="middle" class="spec">VPN • access logging • VLANs</text>
 <text x="1300" y="1565" text-anchor="middle" class="spec">No public RTSP exposure</text>
 <!-- physical and accessory cards -->
-<g filter="url(#shadow)">
+<g>
 <rect x="70" y="1620" width="460" height="390" class="card"/>
 <rect x="570" y="1620" width="460" height="390" class="card"/>
 <rect x="1070" y="1620" width="460" height="390" class="card"/>
