@@ -38,6 +38,7 @@ All paths are under /api/v1/enforcement:
 - GET /challans/overdue/{jurisdiction}
 - POST /challans/{challan_id}/payments
 - POST /challans/{challan_id}/disputes
+- POST /challans/{challan_id}/disputes/resolve
 - POST /challans/{challan_id}/finalise
 - GET /repeat-offender/{jurisdiction}/{person_ref}
 - POST /licence-orders
