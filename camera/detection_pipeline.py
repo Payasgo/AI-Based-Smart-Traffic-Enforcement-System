@@ -63,6 +63,7 @@ class CameraDetectionPipeline:
             lane_change_threshold=int(getattr(config, "RECKLESS_LANE_CHANGE_THRESHOLD", 3)),
             ttc_warning_seconds=float(getattr(config, "RECKLESS_TTC_WARNING_SECONDS", 2.0)),
         )
+        calibration = getattr(config, "CAMERA_CALIBRATION", {}) or {}
         indicator_settings = calibration.get("indicator_detection", {}) or {}
         self.indicator_classifier = indicator_classifier
         # Only explicitly enabled rear-facing cameras use the OpenCV baseline.
@@ -84,7 +85,6 @@ class CameraDetectionPipeline:
             min_samples=indicator_settings.get("min_samples", 5),
             history_size=indicator_settings.get("history_size", 12),
         ))
-        calibration = getattr(config, "CAMERA_CALIBRATION", {}) or {}
         self.lane_polygons = tuple(calibration.get("lane_polygons", ()))
         self._lane_centers = {
             lane["lane_id"]: sum(point[0] for point in lane["polygon"]) / len(lane["polygon"])
