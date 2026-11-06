@@ -63,9 +63,27 @@ class CameraDetectionPipeline:
             lane_change_threshold=int(getattr(config, "RECKLESS_LANE_CHANGE_THRESHOLD", 3)),
             ttc_warning_seconds=float(getattr(config, "RECKLESS_TTC_WARNING_SECONDS", 2.0)),
         )
+        indicator_settings = calibration.get("indicator_detection", {}) or {}
         self.indicator_classifier = indicator_classifier
+        # Only explicitly enabled rear-facing cameras use the OpenCV baseline.
+        if (self.indicator_classifier is None
+                and getattr(config, "CAMERA_ROLE", None) == "rear"
+                and indicator_settings.get("enabled", False)):
+            from detectors.indicator_vision import AmberIndicatorVision
+            self.indicator_classifier = AmberIndicatorVision(
+                hue_low=indicator_settings.get("hue_low", 8),
+                hue_high=indicator_settings.get("hue_high", 35),
+                saturation_min=indicator_settings.get("saturation_min", 80),
+                value_min=indicator_settings.get("value_min", 100),
+                active_ratio=indicator_settings.get("active_ratio", 0.035),
+                visibility_value_min=indicator_settings.get("visibility_value_min", 28),
+            )
         self.ttc_estimator = ttc_estimator
-        self.indicators = defaultdict(IndicatorDetector)
+        self.indicators = defaultdict(lambda: IndicatorDetector(
+            threshold=indicator_settings.get("threshold", 0.65),
+            min_samples=indicator_settings.get("min_samples", 5),
+            history_size=indicator_settings.get("history_size", 12),
+        ))
         calibration = getattr(config, "CAMERA_CALIBRATION", {}) or {}
         self.lane_polygons = tuple(calibration.get("lane_polygons", ()))
         self._lane_centers = {
