@@ -12,7 +12,7 @@ def _point(value, name):
 def _validate_calibration(cal):
     if cal is None: return
     if not isinstance(cal, dict): raise ValueError("calibration must be an object")
-    allowed = {"speed_limit_kmh","speed_line_1_y","speed_line_2_y","line_distance_meters","speed_calibration_verified","wrong_way_direction","road_rule_zones","road_rule_lines","traffic_stop_line_y","calibration_version","jurisdiction","lane_polygons"}
+    allowed = {"speed_limit_kmh","speed_line_1_y","speed_line_2_y","line_distance_meters","speed_calibration_verified","wrong_way_direction","road_rule_zones","road_rule_lines","traffic_stop_line_y","calibration_version","jurisdiction","lane_polygons","indicator_detection"}
     unknown = set(cal)-allowed
     if unknown: raise ValueError(f"unknown calibration keys: {', '.join(sorted(unknown))}")
     if "speed_limit_kmh" in cal and (not isinstance(cal["speed_limit_kmh"],(int,float)) or cal["speed_limit_kmh"]<=0): raise ValueError("calibration.speed_limit_kmh must be > 0")
@@ -40,6 +40,22 @@ def _validate_calibration(cal):
         if not isinstance(lane.get("polygon"), list) or len(lane["polygon"]) < 3:
             raise ValueError(f"calibration.lane_polygons[{i}].polygon needs at least 3 points")
         for point in lane["polygon"]: _point(point, f"calibration.lane_polygons[{i}].polygon")
+    indicator = cal.get("indicator_detection")
+    if indicator is not None:
+        if not isinstance(indicator, dict): raise ValueError("calibration.indicator_detection must be an object")
+        allowed_indicator = {"enabled", "active_ratio", "min_samples", "history_size", "threshold", "hue_low", "hue_high", "saturation_min", "value_min", "visibility_value_min"}
+        unknown_indicator = set(indicator) - allowed_indicator
+        if unknown_indicator: raise ValueError(f"unknown indicator_detection keys: {', '.join(sorted(unknown_indicator))}")
+        if "enabled" in indicator and not isinstance(indicator["enabled"], bool): raise ValueError("indicator_detection.enabled must be a boolean")
+        if "active_ratio" in indicator and (not isinstance(indicator["active_ratio"], (int, float)) or not 0 < indicator["active_ratio"] <= 1): raise ValueError("indicator_detection.active_ratio must be in (0, 1]")
+        if "threshold" in indicator and (not isinstance(indicator["threshold"], (int, float)) or not 0 < indicator["threshold"] <= 1): raise ValueError("indicator_detection.threshold must be in (0, 1]")
+        samples = indicator.get("min_samples", 5); history = indicator.get("history_size", 12)
+        if not isinstance(samples, int) or not isinstance(history, int) or samples < 1 or history < samples: raise ValueError("indicator_detection requires history_size >= min_samples >= 1")
+        for key in ("hue_low", "hue_high"):
+            if key in indicator and (not isinstance(indicator[key], int) or not 0 <= indicator[key] <= 179): raise ValueError(f"indicator_detection.{key} must be an integer in 0..179")
+        if indicator.get("hue_low", 8) >= indicator.get("hue_high", 35): raise ValueError("indicator_detection hue_low must be less than hue_high")
+        for key in ("saturation_min", "value_min", "visibility_value_min"):
+            if key in indicator and (not isinstance(indicator[key], int) or not 0 <= indicator[key] <= 255): raise ValueError(f"indicator_detection.{key} must be an integer in 0..255")
     direction=cal.get("wrong_way_direction")
     if direction is not None and (not isinstance(direction,(list,tuple)) or len(direction)!=2 or not all(isinstance(v,(int,float)) for v in direction) or (direction[0]==0 and direction[1]==0)): raise ValueError("calibration.wrong_way_direction must be a non-zero [x, y] vector")
     stop=cal.get("traffic_stop_line_y")
