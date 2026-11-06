@@ -81,7 +81,7 @@ class MultiCameraRunner:
 
     def health(self):
         states=self.camera_manager.health()
-        return {key:{**states[key],"inference_running":w.is_running,"alerts":self.alert_system.health() if self.alert_system else {"enabled":False},"processed_frames":w.processed_frames,"inference_error":w.last_error,"inference_error_count":w.error_count,"last_inference_error_at":w.last_error_at,"last_successful_inference_at":w.last_success_at,"last_sequence":w.last_sequence} for key,w in self.workers.items()}
+        return {key:{**states[key],"inference_running":w.is_running,"alerts":self.alert_system.health() if self.alert_system else {"enabled":False},"processed_frames":w.processed_frames,"inference_error":w.last_error,"inference_error_count":w.error_count,"last_inference_error_at":w.last_error_at,"last_successful_inference_at":w.last_success_at,"last_sequence":w.last_sequence,"last_frame_received_at":w.last_frame_received_at,"result_queue_drops":w.result_queue_drops} for key,w in self.workers.items()}
 
     def stop(self):
         errors=[]
