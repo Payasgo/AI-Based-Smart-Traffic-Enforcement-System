@@ -25,6 +25,11 @@ def create_enforcement_blueprint(service:EnforcementService,actor_resolver):
     @bp.post("/challans/<cid>/disputes")
     def dispute(cid):
         p=body(); return jsonify(service.file_dispute(cid,p["reference"],p["filed_at"],actor())),201
+
+    @bp.post("/challans/<cid>/disputes/resolve")
+    def resolve_dispute(cid):
+        p=body()
+        return jsonify(service.resolve_dispute(cid,p["reference"],p["outcome"],p["resolution_ref"],actor()))
     @bp.post("/challans/<cid>/finalise")
     def finalise(cid):
         p=body(); return jsonify(service.finalise_offence(cid,p["person_ref"],p["offence_at"],p["disposition_ref"],bool(p.get("qualifies_for_repeat_review",False)),actor()))
