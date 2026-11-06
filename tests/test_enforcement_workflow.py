@@ -56,3 +56,10 @@ def test_detention_requires_police_and_order(svc):
     record=svc.record_vehicle_detention(payload,POLICE)
     assert record["status"]=="DETAINED" and record["physical_action_performed"] is False
     assert svc.release_vehicle(record["detention_id"],"RELEASE-ORDER",POLICE)["status"]=="RELEASED"
+
+def test_dispute_can_be_resolved_with_official_reference(svc):
+    make(svc)
+    svc.file_dispute("C-1","D-RESOLVE",ts(datetime.now(timezone.utc)),ADMIN)
+    result=svc.resolve_dispute("C-1","D-RESOLVE","REJECTED","HEARING-ORDER-1",ADJ)
+    assert result["status"]=="REJECTED"
+    assert result["challan_status"]=="ISSUED"
