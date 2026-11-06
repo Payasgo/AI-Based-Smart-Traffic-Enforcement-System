@@ -749,6 +749,10 @@ If any test fails, check that you are running inside the `venv` environment and 
 
 The compact table below is only a quick overview. For an 8-camera, 24/7 roadside installation, use the detailed [Real-Time Hardware Requirements and Deployment Guide](docs/HARDWARE_REQUIREMENTS_REALTIME.md), including the architecture image, workstation, dedicated ANPR cameras, PoE/network, storage, UPS, site protection and commissioning acceptance checklist.
 
+![Complete illustrated hardware components: cameras, ANPR, AI workstation, PoE switch, NAS, UPS, firewall, poles, cabling and control room](assets/full-hardware-components-board.svg)
+
+[Open the complete hardware specification, quantities, technical requirements, budget tiers and commissioning checklist](docs/HARDWARE_REQUIREMENTS_REALTIME.md).
+
 ![Real-time roadside hardware architecture](assets/realtime-roadside-hardware-architecture.svg)
 
 | Component | Development / pilot | High-quality 5–8 camera deployment target |
