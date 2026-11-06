@@ -823,3 +823,8 @@ enforcement.
 ## Turn-indicator visual baseline
 
 See [Indicator Vision Baseline](docs/INDICATOR_VISION_BASELINE.md) for the experimental rear-camera OpenCV indicator recognizer, per-camera configuration, tests and limitations. It is a heuristic baseline, not a trained model or enforcement-grade classifier.
+
+
+## Speed calibration, ANPR and traffic-signal validation
+
+See [Speed, ANPR and Signal Validation](docs/SPEED_ANPR_SIGNAL_VALIDATION.md) for the calibrated two-line speed requirements, experimental plate localization/OCR consensus, and temporal traffic-signal confidence checks. These outputs remain review candidates pending site calibration and field validation.

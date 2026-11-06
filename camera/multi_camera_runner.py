@@ -57,6 +57,7 @@ class MultiCameraRunner:
         if "road_rule_zones" in cal:config.ROAD_RULE_ZONES=cal["road_rule_zones"]
         if "road_rule_lines" in cal:config.ROAD_RULE_LINES=cal["road_rule_lines"]
         if "traffic_stop_line_y" in cal:config.TRAFFIC_STOP_LINE_Y=float(cal["traffic_stop_line_y"])
+        if "traffic_signal_roi" in cal:config.TRAFFIC_SIGNAL_ROI=cal["traffic_signal_roi"]
         return config
 
     @classmethod

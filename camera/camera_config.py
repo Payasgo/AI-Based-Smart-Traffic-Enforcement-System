@@ -12,7 +12,7 @@ def _point(value, name):
 def _validate_calibration(cal):
     if cal is None: return
     if not isinstance(cal, dict): raise ValueError("calibration must be an object")
-    allowed = {"speed_limit_kmh","speed_line_1_y","speed_line_2_y","line_distance_meters","speed_calibration_verified","wrong_way_direction","road_rule_zones","road_rule_lines","traffic_stop_line_y","calibration_version","jurisdiction","lane_polygons","indicator_detection"}
+    allowed = {"speed_limit_kmh","speed_line_1_y","speed_line_2_y","line_distance_meters","speed_calibration_verified","wrong_way_direction","road_rule_zones","road_rule_lines","traffic_stop_line_y","traffic_signal_roi","calibration_version","jurisdiction","lane_polygons","indicator_detection"}
     unknown = set(cal)-allowed
     if unknown: raise ValueError(f"unknown calibration keys: {', '.join(sorted(unknown))}")
     if "speed_limit_kmh" in cal and (not isinstance(cal["speed_limit_kmh"],(int,float)) or cal["speed_limit_kmh"]<=0): raise ValueError("calibration.speed_limit_kmh must be > 0")
@@ -60,6 +60,9 @@ def _validate_calibration(cal):
     if direction is not None and (not isinstance(direction,(list,tuple)) or len(direction)!=2 or not all(isinstance(v,(int,float)) for v in direction) or (direction[0]==0 and direction[1]==0)): raise ValueError("calibration.wrong_way_direction must be a non-zero [x, y] vector")
     stop=cal.get("traffic_stop_line_y")
     if stop is not None and (not isinstance(stop,(int,float)) or not 0<=stop<=1): raise ValueError("calibration.traffic_stop_line_y must be normalized to 0..1")
+    signal_roi = cal.get("traffic_signal_roi")
+    if signal_roi is not None and (not isinstance(signal_roi, list) or len(signal_roi) != 4 or not all(isinstance(v, (int,float)) and 0 <= v <= 1 for v in signal_roi) or signal_roi[0] >= signal_roi[2] or signal_roi[1] >= signal_roi[3]):
+        raise ValueError("calibration.traffic_signal_roi must be normalized [x1,y1,x2,y2]")
     if cal.get("jurisdiction") not in (None,"ANDHRA_PRADESH","TELANGANA"): raise ValueError("calibration.jurisdiction must be ANDHRA_PRADESH or TELANGANA")
     for i,z in enumerate(cal.get("road_rule_zones",[])):
         if not isinstance(z,dict) or not isinstance(z.get("polygon"),list) or len(z["polygon"])<3: raise ValueError(f"road_rule_zones[{i}].polygon needs at least 3 points")

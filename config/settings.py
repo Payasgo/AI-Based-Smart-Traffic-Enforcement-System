@@ -133,6 +133,14 @@ class Settings:
 
     # ── NEW: Traffic Light Detection ─────────────────────────────────
     TRAFFIC_STOP_LINE_Y = 0.70         # Stop-line position (fraction of frame height)
+    TRAFFIC_SIGNAL_ROI = None          # Normalized [x1,y1,x2,y2]; calibrate per camera
+    TRAFFIC_SIGNAL_HISTORY = 7
+    TRAFFIC_SIGNAL_MIN_SAMPLES = 5
+    TRAFFIC_SIGNAL_MIN_RATIO = 0.015
+    TRAFFIC_SIGNAL_MIN_MARGIN = 0.20
+    ANPR_MIN_CONFIDENCE = 55.0
+    ANPR_HISTORY_SIZE = 8
+    ANPR_MIN_VOTES = 3
 
     # ── NEW: Traffic Sign Recognition ────────────────────────────────
     SIGN_MODEL_PATH     = None         # Path to custom YOLOv8 sign model (optional)

@@ -21,6 +21,12 @@ class SpeedDetector:
         self.speed_calibration_verified = bool(
             getattr(config, "SPEED_CALIBRATION_VERIFIED", False)
         )
+        line1 = float(getattr(config, "SPEED_LINE_1_Y", 0.4))
+        line2 = float(getattr(config, "SPEED_LINE_2_Y", 0.6))
+        distance = float(getattr(config, "LINE_DISTANCE_METERS", 0.0))
+        self.speed_calibration_verified = (self.speed_calibration_verified and 0.0 <= line1 <= 1.0 and 0.0 <= line2 <= 1.0 and line1 != line2 and distance > 0.0 and bool(getattr(config, "CALIBRATION_VERSION", "")))
+        from detectors.anpr_detector import PlateRecognition
+        self.anpr = PlateRecognition(min_confidence=float(getattr(config, "ANPR_MIN_CONFIDENCE", 55.0)), history_size=int(getattr(config, "ANPR_HISTORY_SIZE", 8)), min_votes=int(getattr(config, "ANPR_MIN_VOTES", 3)))
         self.track_timeout_seconds = float(
             getattr(config, "SPEED_TRACK_TIMEOUT_SECONDS", 5.0)
         )
@@ -58,6 +64,10 @@ class SpeedDetector:
         direction = 1 if line2_y > line1_y else -1
 
         for vid, info in tracked_vehicles.items():
+            plate_result = self.anpr.recognize(frame, info.get("bbox", (0, 0, 0, 0)), vid)
+            info["plate"] = plate_result.get("plate", "UNKNOWN")
+            info["plate_confidence"] = plate_result.get("confidence", 0.0)
+            info["plate_status"] = plate_result.get("status", "UNKNOWN")
             _, cy = info["centroid"]
             cy = float(cy)
 
@@ -97,7 +107,7 @@ class SpeedDetector:
                             and speed > self.config.SPEED_LIMIT_KMH
                             and vid not in self._alerted):
                         self._alerted.add(vid)
-                        plate = self._estimate_plate(frame, info["bbox"])
+                        plate = info.get("plate", "UNKNOWN")
                         self._handle_violation(
                             frame, info, speed, plate, timestamp
                         )
@@ -167,32 +177,6 @@ class SpeedDetector:
         )
         self.alert_system.send_alert("SPEED", plate, speed, timestamp)
 
-    def _estimate_plate(self, frame, bbox):
-        """Legacy OCR fallback; a dedicated plate detector should replace this."""
-        try:
-            import pytesseract
-
-            x1, y1, x2, y2 = map(int, bbox)
-            height, width = frame.shape[:2]
-            x1, x2 = max(0, x1), min(width, x2)
-            y1, y2 = max(0, y1), min(height, y2)
-            if x2 <= x1 or y2 <= y1:
-                return "UNKNOWN"
-
-            # Keep the lower-vehicle ROI as a fallback only. A dedicated
-            # plate detector is still required for dependable ANPR.
-            plate_y1 = y1 + int((y2 - y1) * 0.65)
-            roi = frame[plate_y1:y2, x1:x2]
-            if roi.size == 0:
-                return "UNKNOWN"
-            gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
-            _, thresh = cv2.threshold(
-                gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU
-            )
-            text = pytesseract.image_to_string(
-                thresh,
-                config="--psm 11 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
-            ).strip()
-            return text if text else "UNKNOWN"
-        except Exception:
-            return "UNKNOWN"
+    def _estimate_plate(self, frame, bbox, track_id="unknown"):
+        """Return confidence-gated multi-frame plate consensus."""
+        return self.anpr.recognize(frame, bbox, track_id).get("plate", "UNKNOWN")
