@@ -833,3 +833,6 @@ See [Speed, ANPR and Signal Validation](docs/SPEED_ANPR_SIGNAL_VALIDATION.md) fo
 ## Multi-camera benchmarking and evidence review
 
 See [Multi-camera Benchmarking and Operator Evidence Review](docs/MULTICAMERA_BENCHMARK_AND_EVIDENCE_REVIEW.md) for the Windows hardware benchmark command and the dashboard evidence-review workflow.
+
+
+Evidence review decisions are stored separately in an append-only journal. See [Evidence Review Journal](docs/EVIDENCE_REVIEW_JOURNAL.md).
