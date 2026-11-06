@@ -43,6 +43,7 @@ class MultiCameraRunner:
         config.FRAME_WIDTH=camera_config.width;config.FRAME_HEIGHT=camera_config.height
         config.CAMERA_ID=camera_config.camera_id;config.CAMERA_SITE_ID=camera_config.location_id
         cal=camera_config.calibration or {}
+        config.CAMERA_CALIBRATION=cal
         config.CALIBRATION_VERSION=cal.get("calibration_version","unversioned")
         jurisdiction=cal.get("jurisdiction",config.TRAFFIC_JURISDICTION)
         if jurisdiction not in config.SUPPORTED_JURISDICTIONS:raise ValueError(f"Unsupported jurisdiction for camera {camera_config.camera_id}: {jurisdiction}")

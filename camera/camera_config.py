@@ -12,7 +12,7 @@ def _point(value, name):
 def _validate_calibration(cal):
     if cal is None: return
     if not isinstance(cal, dict): raise ValueError("calibration must be an object")
-    allowed = {"speed_limit_kmh","speed_line_1_y","speed_line_2_y","line_distance_meters","speed_calibration_verified","wrong_way_direction","road_rule_zones","road_rule_lines","traffic_stop_line_y","calibration_version","jurisdiction"}
+    allowed = {"speed_limit_kmh","speed_line_1_y","speed_line_2_y","line_distance_meters","speed_calibration_verified","wrong_way_direction","road_rule_zones","road_rule_lines","traffic_stop_line_y","calibration_version","jurisdiction","lane_polygons"}
     unknown = set(cal)-allowed
     if unknown: raise ValueError(f"unknown calibration keys: {', '.join(sorted(unknown))}")
     if "speed_limit_kmh" in cal and (not isinstance(cal["speed_limit_kmh"],(int,float)) or cal["speed_limit_kmh"]<=0): raise ValueError("calibration.speed_limit_kmh must be > 0")
@@ -29,6 +29,17 @@ def _validate_calibration(cal):
         raise ValueError("calibration.speed_calibration_verified must be a boolean")
     if cal.get("speed_calibration_verified") and distance is None:
         raise ValueError("verified speed calibration requires line_distance_meters")
+    lane_polygons = cal.get("lane_polygons", [])
+    if not isinstance(lane_polygons, list): raise ValueError("calibration.lane_polygons must be a list")
+    seen_lane_ids = set()
+    for i, lane in enumerate(lane_polygons):
+        if not isinstance(lane, dict) or not isinstance(lane.get("lane_id"), str) or not lane["lane_id"].strip():
+            raise ValueError(f"calibration.lane_polygons[{i}] requires a lane_id")
+        if lane["lane_id"] in seen_lane_ids: raise ValueError("calibration.lane_polygons lane_id values must be unique")
+        seen_lane_ids.add(lane["lane_id"])
+        if not isinstance(lane.get("polygon"), list) or len(lane["polygon"]) < 3:
+            raise ValueError(f"calibration.lane_polygons[{i}].polygon needs at least 3 points")
+        for point in lane["polygon"]: _point(point, f"calibration.lane_polygons[{i}].polygon")
     direction=cal.get("wrong_way_direction")
     if direction is not None and (not isinstance(direction,(list,tuple)) or len(direction)!=2 or not all(isinstance(v,(int,float)) for v in direction) or (direction[0]==0 and direction[1]==0)): raise ValueError("calibration.wrong_way_direction must be a non-zero [x, y] vector")
     stop=cal.get("traffic_stop_line_y")
