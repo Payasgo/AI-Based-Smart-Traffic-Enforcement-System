@@ -1,58 +1,49 @@
-"""
-Evidence logging: saves violation images and appends records to a CSV file.
-"""
-
-import os
-import csv
-import cv2
-from datetime import datetime
+"""Thread-safe evidence persistence with backward-compatible CSV migration."""
+import csv, hashlib, os, threading, uuid
+from datetime import datetime, timezone
 from pathlib import Path
-
-
-FIELDNAMES = [
-    "timestamp", "violation_type", "license_plate",
-    "speed_kmh", "evidence_image", "location"
-]
-
+import cv2
+FIELDNAMES=["event_id","timestamp","camera_id","site_id","calibration_version","violation_type","license_plate","speed_kmh","evidence_image","evidence_sha256","location","review_status"]
 
 class EvidenceLogger:
-    """Persists violation data to CSV and disk images."""
-
-    def __init__(self, log_dir="logs", evidence_dir="evidence"):
-        self.log_dir      = Path(log_dir)
-        self.evidence_dir = Path(evidence_dir)
-        self.log_dir.mkdir(parents=True, exist_ok=True)
-        self.evidence_dir.mkdir(parents=True, exist_ok=True)
-
-        self.csv_path = self.log_dir / "violations.csv"
-        self._init_csv()
-
+    def __init__(self,log_dir="logs",evidence_dir="evidence"):
+        self.log_dir,self.evidence_dir=Path(log_dir),Path(evidence_dir)
+        self.log_dir.mkdir(parents=True,exist_ok=True); self.evidence_dir.mkdir(parents=True,exist_ok=True)
+        self.csv_path=self.log_dir/"violations.csv"; self._lock=threading.RLock(); self._init_csv()
     def _init_csv(self):
-        if not self.csv_path.exists():
-            with open(self.csv_path, "w", newline="") as f:
-                writer = csv.DictWriter(f, fieldnames=FIELDNAMES)
-                writer.writeheader()
-
-    def save_evidence(self, frame, violation_type, plate, timestamp):
-        """Save a JPEG snapshot as evidence. Returns file path string."""
-        ts_str   = timestamp.strftime("%Y%m%d_%H%M%S_%f")
-        filename = f"{violation_type}_{plate}_{ts_str}.jpg"
-        filepath = self.evidence_dir / filename
-        cv2.imwrite(str(filepath), frame)
-        return str(filepath)
-
-    def log_violation(self, violation_type, license_plate, speed_kmh,
-                      timestamp, evidence_path, location="N/A"):
-        """Append one row to the violations CSV."""
-        row = {
-            "timestamp":      timestamp.strftime("%Y-%m-%d %H:%M:%S"),
-            "violation_type": violation_type,
-            "license_plate":  license_plate,
-            "speed_kmh":      f"{speed_kmh:.1f}" if speed_kmh else "",
-            "evidence_image": evidence_path or "",
-            "location":       location,
-        }
-        with open(self.csv_path, "a", newline="") as f:
-            writer = csv.DictWriter(f, fieldnames=FIELDNAMES)
-            writer.writerow(row)
-        print(f"[LOG] Violation logged → {self.csv_path}")
+        with self._lock:
+            if not self.csv_path.exists() or self.csv_path.stat().st_size==0:
+                with self.csv_path.open("w",newline="",encoding="utf-8") as f:csv.DictWriter(f,fieldnames=FIELDNAMES).writeheader()
+                return
+            with self.csv_path.open("r",newline="",encoding="utf-8") as f:
+                reader=csv.DictReader(f)
+                if all(n in (reader.fieldnames or []) for n in FIELDNAMES):return
+                rows=list(reader)
+            tmp=self.csv_path.with_suffix(".csv.tmp")
+            with tmp.open("w",newline="",encoding="utf-8") as f:
+                writer=csv.DictWriter(f,fieldnames=FIELDNAMES);writer.writeheader()
+                for old in rows:
+                    row={n:old.get(n,"") for n in FIELDNAMES};row["event_id"]=row["event_id"] or uuid.uuid4().hex;row["review_status"]=row["review_status"] or "PENDING_REVIEW";writer.writerow(row)
+            os.replace(tmp,self.csv_path)
+    @staticmethod
+    def _timestamp(value):
+        value=value or datetime.now(timezone.utc)
+        if value.tzinfo is None:value=value.replace(tzinfo=timezone.utc)
+        return value.astimezone(timezone.utc).isoformat()
+    def save_evidence(self,frame,violation_type,plate,timestamp,camera_id=None):
+        safe=lambda v:"".join(c if c.isalnum() or c in "-_" else "_" for c in str(v or "unknown"))
+        path=self.evidence_dir/f"{safe(camera_id or 'single')}_{safe(violation_type)}_{safe(plate)}_{uuid.uuid4().hex}.jpg"
+        with self._lock:
+            if not cv2.imwrite(str(path),frame):raise OSError(f"Could not write evidence image: {path}")
+        return str(path)
+    def log_violation(self,violation_type,license_plate,speed_kmh,timestamp,evidence_path,location="N/A",*,camera_id="",site_id="",calibration_version="",event_id=None,review_status="PENDING_REVIEW"):
+        digest=""
+        if evidence_path and Path(evidence_path).is_file():
+            h=hashlib.sha256()
+            with Path(evidence_path).open("rb") as f:
+                for chunk in iter(lambda:f.read(1024*1024),b""):h.update(chunk)
+            digest=h.hexdigest()
+        row={"event_id":event_id or uuid.uuid4().hex,"timestamp":self._timestamp(timestamp),"camera_id":camera_id or "","site_id":site_id or "","calibration_version":calibration_version or "","violation_type":violation_type,"license_plate":license_plate or "","speed_kmh":f"{speed_kmh:.1f}" if isinstance(speed_kmh,(int,float)) else "","evidence_image":evidence_path or "","evidence_sha256":digest,"location":location or "N/A","review_status":review_status}
+        with self._lock:
+            self._init_csv()
+            with self.csv_path.open("a",newline="",encoding="utf-8") as f:csv.DictWriter(f,fieldnames=FIELDNAMES).writerow(row)
