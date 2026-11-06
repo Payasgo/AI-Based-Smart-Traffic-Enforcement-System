@@ -828,3 +828,8 @@ See [Indicator Vision Baseline](docs/INDICATOR_VISION_BASELINE.md) for the exper
 ## Speed calibration, ANPR and traffic-signal validation
 
 See [Speed, ANPR and Signal Validation](docs/SPEED_ANPR_SIGNAL_VALIDATION.md) for the calibrated two-line speed requirements, experimental plate localization/OCR consensus, and temporal traffic-signal confidence checks. These outputs remain review candidates pending site calibration and field validation.
+
+
+## Multi-camera benchmarking and evidence review
+
+See [Multi-camera Benchmarking and Operator Evidence Review](docs/MULTICAMERA_BENCHMARK_AND_EVIDENCE_REVIEW.md) for the Windows hardware benchmark command and the dashboard evidence-review workflow.
