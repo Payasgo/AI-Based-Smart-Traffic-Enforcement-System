@@ -3,6 +3,7 @@ import csv, hashlib, os, threading, uuid
 from datetime import datetime, timezone
 from pathlib import Path
 import cv2
+from utils.evidence_file_lock import evidence_file_lock
 FIELDNAMES=["event_id","timestamp","camera_id","site_id","calibration_version","violation_type","license_plate","speed_kmh","evidence_image","evidence_sha256","location","review_status","reviewed_by","review_note"]
 
 class EvidenceLogger:
@@ -11,7 +12,7 @@ class EvidenceLogger:
         self.log_dir.mkdir(parents=True,exist_ok=True); self.evidence_dir.mkdir(parents=True,exist_ok=True)
         self.csv_path=self.log_dir/"violations.csv"; self._lock=threading.RLock(); self._init_csv()
     def _init_csv(self):
-        with self._lock:
+        with self._lock, evidence_file_lock(self.csv_path):
             if not self.csv_path.exists() or self.csv_path.stat().st_size==0:
                 with self.csv_path.open("w",newline="",encoding="utf-8") as f:csv.DictWriter(f,fieldnames=FIELDNAMES).writeheader()
                 return
@@ -33,7 +34,7 @@ class EvidenceLogger:
     def save_evidence(self,frame,violation_type,plate,timestamp,camera_id=None):
         safe=lambda v:"".join(c if c.isalnum() or c in "-_" else "_" for c in str(v or "unknown"))
         path=self.evidence_dir/f"{safe(camera_id or 'single')}_{safe(violation_type)}_{safe(plate)}_{uuid.uuid4().hex}.jpg"
-        with self._lock:
+        with self._lock, evidence_file_lock(self.csv_path):
             if not cv2.imwrite(str(path),frame):raise OSError(f"Could not write evidence image: {path}")
         return str(path)
     def log_violation(self,violation_type,license_plate,speed_kmh,timestamp,evidence_path,location="N/A",*,camera_id="",site_id="",calibration_version="",event_id=None,review_status="PENDING_REVIEW"):
@@ -44,6 +45,9 @@ class EvidenceLogger:
                 for chunk in iter(lambda:f.read(1024*1024),b""):h.update(chunk)
             digest=h.hexdigest()
         row={"event_id":event_id or uuid.uuid4().hex,"timestamp":self._timestamp(timestamp),"camera_id":camera_id or "","site_id":site_id or "","calibration_version":calibration_version or "","violation_type":violation_type,"license_plate":license_plate or "","speed_kmh":f"{speed_kmh:.1f}" if isinstance(speed_kmh,(int,float)) else "","evidence_image":evidence_path or "","evidence_sha256":digest,"location":location or "N/A","review_status":review_status}
-        with self._lock:
+        with self._lock, evidence_file_lock(self.csv_path):
             self._init_csv()
-            with self.csv_path.open("a",newline="",encoding="utf-8") as f:csv.DictWriter(f,fieldnames=FIELDNAMES).writerow(row)
+            with self.csv_path.open("a",newline="",encoding="utf-8") as f:
+                csv.DictWriter(f,fieldnames=FIELDNAMES).writerow(row)
+                f.flush()
+                os.fsync(f.fileno())
