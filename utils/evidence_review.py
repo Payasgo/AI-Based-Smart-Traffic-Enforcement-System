@@ -6,6 +6,7 @@ import csv
 import os
 import threading
 from pathlib import Path
+from utils.evidence_file_lock import evidence_file_lock
 
 REVIEW_STATUSES = {"PENDING_REVIEW", "APPROVED", "REJECTED", "NEEDS_MORE_EVIDENCE"}
 
@@ -19,7 +20,7 @@ class EvidenceReviewStore:
         if status not in REVIEW_STATUSES and status != "ALL":
             raise ValueError("Unsupported review status")
         limit = max(1, min(int(limit), 500))
-        with self._lock:
+        with self._lock, evidence_file_lock(self.csv_path):
             if not self.csv_path.exists():
                 return []
             with self.csv_path.open("r", newline="", encoding="utf-8-sig") as handle:
