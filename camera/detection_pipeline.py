@@ -1,15 +1,24 @@
-"""Per-camera visual detector suite for multi-camera operation.
+"""Per-camera visual and temporal driving-behaviour detection pipeline.
 
-Each instance owns its temporal detector state. Evidence and alert sinks are
-shared by the runner; audio capture and lesson/voice services remain central.
+Lane-change analytics require surveyed lane polygons in camera calibration.
+Indicator probabilities and TTC are accepted only from optional upstream
+classifiers/estimators; without them the result remains UNKNOWN/unavailable.
+All behaviour outputs are review candidates, never legal conclusions.
 """
-from datetime import datetime
+from collections import defaultdict
+from datetime import datetime, timezone
+
+from analytics.trajectory_analyzer import TrajectoryAnalyzer
+from detectors.indicator_detector import IndicatorDetector
+from detectors.lane_change_detector import LaneChangeDetector
+from detectors.reckless_driving_detector import RecklessDrivingDetector
 
 
 class CameraDetectionPipeline:
-    """Run the legacy visual detector sequence on one camera's frame stream."""
+    """Run visual detectors and per-track behaviour analytics for one camera."""
 
-    def __init__(self, config, logger, alert_system):
+    def __init__(self, config, logger, alert_system,
+                 indicator_classifier=None, ttc_estimator=None):
         from detectors.speed_detector import SpeedDetector
         from detectors.wrong_way_detector import WrongWayDetector
         from detectors.road_rule_detector import RoadRuleDetector
@@ -25,10 +34,8 @@ class CameraDetectionPipeline:
             ParkingAssistant,
         )
 
-        self.config = config
+        self.config, self.logger, self.alert_system = config, logger, alert_system
         self.parking_mode = bool(getattr(config, "PARKING_MODE", False))
-        # Detector objects are intentionally created per camera: their
-        # cooldowns, histories and track-associated state must not leak.
         self.lane = LaneDetector(config, logger, alert_system)
         self.speed = SpeedDetector(config, logger, alert_system)
         self.wrong_way = WrongWayDetector(config, logger, alert_system)
@@ -46,12 +53,130 @@ class CameraDetectionPipeline:
         self.distraction = DistractionDetector(config, logger, alert_system)
         self.parking = ParkingAssistant(config, logger, alert_system)
 
+        self.trajectory = TrajectoryAnalyzer()
+        self.lane_changes = LaneChangeDetector(
+            min_changes=int(getattr(config, "RECKLESS_LANE_CHANGE_THRESHOLD", 3)),
+            window_seconds=float(getattr(config, "RECKLESS_LANE_CHANGE_WINDOW_SECONDS", 8.0)),
+            cooldown_seconds=float(getattr(config, "RECKLESS_EVENT_COOLDOWN_SECONDS", 10.0)),
+        )
+        self.reckless = RecklessDrivingDetector(
+            lane_change_threshold=int(getattr(config, "RECKLESS_LANE_CHANGE_THRESHOLD", 3)),
+            ttc_warning_seconds=float(getattr(config, "RECKLESS_TTC_WARNING_SECONDS", 2.0)),
+        )
+        self.indicator_classifier = indicator_classifier
+        self.ttc_estimator = ttc_estimator
+        self.indicators = defaultdict(IndicatorDetector)
+        calibration = getattr(config, "CAMERA_CALIBRATION", {}) or {}
+        self.lane_polygons = tuple(calibration.get("lane_polygons", ()))
+
+    @staticmethod
+    def _inside_polygon(point, polygon):
+        """Ray-casting point-in-polygon; inputs are normalized coordinates."""
+        x, y = point
+        inside = False
+        j = len(polygon) - 1
+        for i, (xi, yi) in enumerate(polygon):
+            xj, yj = polygon[j]
+            if ((yi > y) != (yj > y)):
+                crossing_x = (xj - xi) * (y - yi) / ((yj - yi) or 1e-12) + xi
+                if x < crossing_x:
+                    inside = not inside
+            j = i
+        return inside
+
+    def _lane_id(self, centroid, frame_shape):
+        if not self.lane_polygons:
+            return None
+        height, width = frame_shape[:2]
+        point = (float(centroid[0]) / max(width, 1),
+                 float(centroid[1]) / max(height, 1))
+        matches = [lane["lane_id"] for lane in self.lane_polygons
+                   if self._inside_polygon(point, lane["polygon"])]
+        # Ambiguous overlaps are deliberately UNKNOWN, not an arbitrary lane.
+        return matches[0] if len(matches) == 1 else None
+
+    def _indicator_state(self, frame, track_id, info, timestamp):
+        if self.indicator_classifier is None:
+            return self.indicators[track_id].update(visible=False)
+        try:
+            observation = self.indicator_classifier(frame, info.get("bbox"),
+                                                    track_id, timestamp)
+            if not isinstance(observation, dict):
+                raise ValueError("indicator classifier must return a mapping")
+            return self.indicators[track_id].update(
+                observation.get("left_probability"),
+                observation.get("right_probability"),
+                visible=bool(observation.get("visible", False)),
+            )
+        except Exception:
+            # A classifier failure is unobservable, never evidence of OFF.
+            return self.indicators[track_id].update(visible=False)
+
+    def _record_behaviour_event(self, frame, event, timestamp):
+        event_type = event["event_type"]
+        plate = "UNKNOWN"
+        evidence_path = None
+        try:
+            evidence_path = self.logger.save_evidence(
+                frame, event_type, plate, timestamp
+            )
+            self.logger.log_violation(
+                violation_type=event_type, license_plate=plate,
+                speed_kmh=None, timestamp=timestamp,
+                evidence_path=evidence_path,
+            )
+        except Exception as exc:
+            # Keep analytics alive, but surface evidence failures to worker health.
+            raise RuntimeError(f"could not persist behaviour review event: {exc}") from exc
+        self.alert_system.send_alert(event_type, plate, None, timestamp)
+
+    def _process_behaviour(self, frame, tracked_vehicles, timestamp):
+        height, width = frame.shape[:2]
+        for track_id, info in tracked_vehicles.items():
+            centroid = info.get("centroid")
+            if not centroid:
+                continue
+            lane_id = self._lane_id(centroid, (height, width, 3))
+            self.trajectory.update(track_id, timestamp, centroid, lane_id)
+            transitions = self.trajectory.lane_transitions(track_id, window_seconds=8.0)
+            lane_event = self.lane_changes.update(track_id, transitions)
+            indicator_state = self._indicator_state(frame, track_id, info, timestamp)
+            manoeuvre = None
+            if transitions:
+                manoeuvre = "LEFT" if transitions[-1][2] < transitions[-1][1] else "RIGHT"
+            ttc = None
+            if self.ttc_estimator is not None:
+                try:
+                    ttc = self.ttc_estimator(track_id, info, tracked_vehicles, timestamp)
+                except Exception:
+                    ttc = None
+            event = self.reckless.evaluate(
+                track_id,
+                lane_change_count=(lane_event or {}).get("transition_count", 0),
+                indicator_state=indicator_state,
+                manoeuvre_direction=manoeuvre,
+                ttc_seconds=ttc,
+                indicator_visible=(indicator_state != "UNKNOWN"),
+            )
+            if lane_event:
+                self._record_behaviour_event(frame, lane_event, timestamp)
+            if event:
+                self._record_behaviour_event(frame, event, timestamp)
+                x1, y1, _, _ = info.get("bbox", (int(centroid[0]), int(centroid[1]), 0, 0))
+                import cv2
+                cv2.putText(frame, f"DRIVING RISK: {event['risk_level']} - REVIEW",
+                            (int(x1), max(20, int(y1) - 8)),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 165, 255), 2)
+
     def process(self, frame, tracked_vehicles, timestamp=None):
-        timestamp = timestamp or datetime.now()
+        timestamp = timestamp or datetime.now(timezone.utc)
+        if timestamp.tzinfo is None:
+            timestamp = timestamp.replace(tzinfo=timezone.utc)
         if self.parking_mode:
             return self.parking.process(frame, tracked_vehicles, timestamp)
 
         frame = self.lane.process(frame, tracked_vehicles, timestamp)
+        self._process_behaviour(frame, tracked_vehicles, timestamp)
         frame = self.speed.process(frame, tracked_vehicles, timestamp)
         frame = self.wrong_way.process(frame, tracked_vehicles, timestamp)
         frame = self.drunk.process(frame, tracked_vehicles, timestamp)
