@@ -39,3 +39,23 @@ def test_no_amber_returns_low_probabilities_when_roi_is_visible():
     assert result["visible"] is True
     assert result["left_probability"] == 0.0
     assert result["right_probability"] == 0.0
+
+
+def test_camera_config_accepts_and_validates_indicator_settings():
+    from camera.camera_config import CameraConfig
+    camera = CameraConfig.from_dict({
+        "camera_id": "rear-01", "source": 0, "role": "rear",
+        "calibration": {"indicator_detection": {
+            "enabled": True, "active_ratio": 0.04,
+            "min_samples": 4, "history_size": 8
+        }}
+    })
+    assert camera.calibration["indicator_detection"]["enabled"] is True
+    import pytest
+    with pytest.raises(ValueError, match="history_size"):
+        CameraConfig.from_dict({
+            "camera_id": "rear-02", "source": 1, "role": "rear",
+            "calibration": {"indicator_detection": {
+                "enabled": True, "min_samples": 9, "history_size": 5
+            }}
+        })
