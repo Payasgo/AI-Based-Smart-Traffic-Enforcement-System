@@ -279,6 +279,11 @@ DASHBOARD_HTML = """<!DOCTYPE html>
   <div class="card"><h2>Speed Distribution</h2><canvas id="chartSpeed"></canvas></div>
   <div class="card"><h2>Top Repeat Offenders</h2><canvas id="chartPlates"></canvas></div>
   <div class="card wide">
+    <h2>Evidence review queue</h2>
+    <p style="color:var(--muted);margin-bottom:10px">Review each event before enforcement action. Decisions are recorded in the evidence CSV.</p>
+    <div id="review-list">Loading review queue…</div>
+  </div>
+  <div class="card wide">
     <h2>Recent Violations</h2>
     <table>
       <thead><tr><th>Timestamp</th><th>Type</th><th>Plate</th><th>Speed (km/h)</th></tr></thead>
@@ -391,6 +396,40 @@ function updateCharts(d) {
   });
 }
 
+async function fetchReviewQueue() {
+  const host = document.getElementById("review-list");
+  try {
+    const response = await fetch("/api/review?status=PENDING_REVIEW&limit=100");
+    const rows = await response.json();
+    if (!response.ok) throw new Error(rows.error || "Review queue unavailable");
+    host.replaceChildren();
+    if (!rows.length) { host.textContent = "No evidence awaiting review."; return; }
+    rows.forEach(row => {
+      const item = document.createElement("div");
+      item.style.cssText = "border-top:1px solid var(--border);padding:12px 0;display:flex;gap:12px;align-items:center;flex-wrap:wrap";
+      const details = document.createElement("div");
+      details.style.cssText = "flex:1;min-width:240px";
+      const title = document.createElement("strong");
+      title.textContent = String(row.violation_type || "EVENT") + " · " + String(row.license_plate || "UNKNOWN") + " · " + String(row.camera_id || "single camera");
+      const meta = document.createElement("div");
+      meta.style.cssText = "color:var(--muted);font-size:.8rem";
+      meta.textContent = String(row.timestamp || "") + " | " + String(row.event_id || "") + " | " + (row.evidence_sha256 ? "SHA-256 recorded" : "No evidence hash");
+      details.append(title, meta); item.append(details);
+      [["APPROVED","Approve"],["REJECTED","Reject"],["NEEDS_MORE_EVIDENCE","Needs evidence"]].forEach(([status,label]) => {
+        const button = document.createElement("button"); button.textContent = label; button.style.cssText = "padding:7px 10px;cursor:pointer";
+        button.addEventListener("click", async () => {
+          const reviewer = window.prompt("Reviewer identifier:"); if (!reviewer) return;
+          const note = window.prompt("Review note (optional):") || "";
+          const result = await fetch("/api/review/" + encodeURIComponent(row.event_id), {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({status,reviewer,note})});
+          if (!result.ok) { const err = await result.json(); window.alert(err.error || "Could not save review"); return; }
+          fetchReviewQueue();
+        }); item.append(button);
+      });
+      host.append(item);
+    });
+  } catch (error) { host.textContent = "Review queue error: " + error.message; }
+}
+
 async function fetchStats() {
   try {
     const res  = await fetch('/api/stats');
@@ -403,7 +442,9 @@ async function fetchStats() {
 
 initCharts();
 fetchStats();
+fetchReviewQueue();
 setInterval(fetchStats, 5000);
+setInterval(fetchReviewQueue, 15000);
 </script>
 </body>
 </html>"""
@@ -418,6 +459,8 @@ def create_app(csv_path: str, refresh: float = 5.0, username=None, password=None
         raise RuntimeError("Flask is not installed.  Run: pip install flask")
 
     cache = StatsCache(csv_path, refresh)
+    from utils.evidence_review import EvidenceReviewStore
+    review_store = EvidenceReviewStore(csv_path)
     app   = Flask(__name__)
     username = username if username is not None else os.getenv('DASHBOARD_USERNAME')
     password = password if password is not None else os.getenv('DASHBOARD_PASSWORD')
@@ -451,6 +494,27 @@ def create_app(csv_path: str, refresh: float = 5.0, username=None, password=None
     def api_violations():
         data = cache.get()
         return jsonify(data.get("recent", []))
+
+    @app.route("/api/review", methods=["GET"])
+    def api_review_queue():
+        status = request.args.get("status", "PENDING_REVIEW")
+        try:
+            return jsonify(review_store.list_events(status=status, limit=request.args.get("limit", 100)))
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 400
+
+    @app.route("/api/review/<event_id>", methods=["POST"])
+    def api_review_event(event_id):
+        payload = request.get_json(silent=True) or {}
+        try:
+            row = review_store.update_status(event_id, payload.get("status"), payload.get("reviewer"), payload.get("note", ""))
+            return jsonify(row)
+        except KeyError as exc:
+            return jsonify({"error": str(exc)}), 404
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 400
+        except RuntimeError as exc:
+            return jsonify({"error": str(exc)}), 409
 
     return app, cache
 
