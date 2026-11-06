@@ -807,3 +807,14 @@ MIT License — see `LICENSE` for full terms.
 
 <p align="center"><i>Smarter Roads, Safer Lives — AI at the Service of Traffic Enforcement</i></p>
 <p align="center"><b>Kranthi Kumar Yarlagadda</b></p>
+
+
+## Project status and release planning
+
+- [Project roadmap and pending work](docs/PROJECT_ROADMAP_AND_PENDING_WORK.md)
+- [Release readiness checklist](docs/RELEASE_READINESS_CHECKLIST.md)
+
+These documents distinguish implemented components from work that still needs
+calibration, validation, security review or operational approval. A passing CI
+run is not evidence of field accuracy or authorization for automatic traffic
+enforcement.
