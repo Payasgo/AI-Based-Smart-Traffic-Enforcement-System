@@ -134,7 +134,7 @@ class CameraDetectionPipeline:
             # A classifier failure is unobservable, never evidence of OFF.
             return self.indicators[track_id].update(visible=False)
 
-    def _record_behaviour_event(self, frame, event, timestamp):
+    def _record_behaviour_event(self, frame, event, timestamp, track_id=None, frame_sequence=None):
         event_type = event["event_type"]
         plate = "UNKNOWN"
         evidence_path = None
@@ -145,14 +145,15 @@ class CameraDetectionPipeline:
             self.logger.log_violation(
                 violation_type=event_type, license_plate=plate,
                 speed_kmh=None, timestamp=timestamp,
-                evidence_path=evidence_path,
+                evidence_path=evidence_path, track_id=track_id or event.get("track_id", ""),
+                frame_sequence=frame_sequence if frame_sequence is not None else "",
             )
         except Exception as exc:
             # Keep analytics alive, but surface evidence failures to worker health.
             raise RuntimeError(f"could not persist behaviour review event: {exc}") from exc
         self.alert_system.send_alert(event_type, plate, None, timestamp)
 
-    def _process_behaviour(self, frame, tracked_vehicles, timestamp):
+    def _process_behaviour(self, frame, tracked_vehicles, timestamp, frame_sequence=None):
         height, width = frame.shape[:2]
         for track_id, info in tracked_vehicles.items():
             centroid = info.get("centroid")
@@ -183,16 +184,16 @@ class CameraDetectionPipeline:
                 indicator_visible=(indicator_state != "UNKNOWN"),
             )
             if lane_event:
-                self._record_behaviour_event(frame, lane_event, timestamp)
+                self._record_behaviour_event(frame, lane_event, timestamp, track_id=track_id, frame_sequence=frame_sequence)
             if event:
-                self._record_behaviour_event(frame, event, timestamp)
+                self._record_behaviour_event(frame, event, timestamp, track_id=track_id, frame_sequence=frame_sequence)
                 x1, y1, _, _ = info.get("bbox", (int(centroid[0]), int(centroid[1]), 0, 0))
                 import cv2
                 cv2.putText(frame, f"DRIVING RISK: {event['risk_level']} - REVIEW",
                             (int(x1), max(20, int(y1) - 8)),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 165, 255), 2)
 
-    def process(self, frame, tracked_vehicles, timestamp=None):
+    def process(self, frame, tracked_vehicles, timestamp=None, frame_sequence=None):
         timestamp = timestamp or datetime.now(timezone.utc)
         if timestamp.tzinfo is None:
             timestamp = timestamp.replace(tzinfo=timezone.utc)
@@ -200,7 +201,7 @@ class CameraDetectionPipeline:
             return self.parking.process(frame, tracked_vehicles, timestamp)
 
         frame = self.lane.process(frame, tracked_vehicles, timestamp)
-        self._process_behaviour(frame, tracked_vehicles, timestamp)
+        self._process_behaviour(frame, tracked_vehicles, timestamp, frame_sequence=frame_sequence)
         frame = self.speed.process(frame, tracked_vehicles, timestamp)
         frame = self.wrong_way.process(frame, tracked_vehicles, timestamp)
         frame = self.drunk.process(frame, tracked_vehicles, timestamp)
