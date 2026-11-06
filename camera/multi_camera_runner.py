@@ -48,6 +48,10 @@ class MultiCameraRunner:
         if jurisdiction not in config.SUPPORTED_JURISDICTIONS:raise ValueError(f"Unsupported jurisdiction for camera {camera_config.camera_id}: {jurisdiction}")
         config.TRAFFIC_JURISDICTION=jurisdiction
         if "speed_limit_kmh" in cal:config.SPEED_LIMIT_KMH=float(cal["speed_limit_kmh"])
+        if "speed_line_1_y" in cal:config.SPEED_LINE_1_Y=float(cal["speed_line_1_y"])
+        if "speed_line_2_y" in cal:config.SPEED_LINE_2_Y=float(cal["speed_line_2_y"])
+        if "line_distance_meters" in cal:config.LINE_DISTANCE_METERS=float(cal["line_distance_meters"])
+        config.SPEED_CALIBRATION_VERIFIED=bool(cal.get("speed_calibration_verified", False))
         if "wrong_way_direction" in cal:config.WRONG_WAY_DIRECTION_X,config.WRONG_WAY_DIRECTION_Y=cal["wrong_way_direction"]
         if "road_rule_zones" in cal:config.ROAD_RULE_ZONES=cal["road_rule_zones"]
         if "road_rule_lines" in cal:config.ROAD_RULE_LINES=cal["road_rule_lines"]
