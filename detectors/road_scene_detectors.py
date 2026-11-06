@@ -51,10 +51,14 @@ class TrafficLightDetector:
         self.alert_system = alert_system
         self._model       = _load_yolo(config.YOLO_MODEL_PATH)
         self._alerted: set = set()
-        self._state       = "UNKNOWN"     # RED | AMBER | GREEN | UNKNOWN
-
-        # Stop line Y position (fraction of frame height)
-        self._stop_line_y_frac = getattr(config, 'TRAFFIC_STOP_LINE_Y', 0.7)
+        self._state = "UNKNOWN"
+        self.state_confidence = 0.0
+        self._signal_history = deque(maxlen=int(getattr(config, "TRAFFIC_SIGNAL_HISTORY", 7)))
+        self._signal_min_samples = int(getattr(config, "TRAFFIC_SIGNAL_MIN_SAMPLES", 5))
+        self._signal_min_ratio = float(getattr(config, "TRAFFIC_SIGNAL_MIN_RATIO", 0.015))
+        self._signal_min_margin = float(getattr(config, "TRAFFIC_SIGNAL_MIN_MARGIN", 0.20))
+        self._signal_roi = getattr(config, "TRAFFIC_SIGNAL_ROI", None)
+        self._stop_line_y_frac = getattr(config, "TRAFFIC_STOP_LINE_Y", 0.7)
 
     # ------------------------------------------------------------------
     def process(self, frame: np.ndarray, tracked_vehicles: dict,
@@ -70,7 +74,7 @@ class TrafficLightDetector:
                      "GREEN": (0, 255, 0), "UNKNOWN": (128, 128, 128)}
         line_color = color_map.get(self._state, (128, 128, 128))
         cv2.line(frame, (0, stop_y), (w, stop_y), line_color, 2)
-        cv2.putText(frame, f"SIGNAL: {self._state}", (10, 80),
+        cv2.putText(frame, f"SIGNAL: {self._state} ({self.state_confidence:.2f})", (10, 80),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.55, line_color, 2)
 
         # Stop-line crossing is handled by RoadRuleDetector, which verifies
@@ -80,26 +84,34 @@ class TrafficLightDetector:
 
     # ------------------------------------------------------------------
     def _detect_state(self, frame: np.ndarray) -> str:
-        """Use colour segmentation in top-third of frame."""
+        """Return a temporally confirmed state from a camera-specific signal ROI."""
         h, w = frame.shape[:2]
-        roi  = frame[0:h // 3, w // 4: 3 * w // 4]
-        hsv  = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
-
-        # Colour masks
-        red1   = cv2.inRange(hsv, (0,  120,  70), (10,  255, 255))
-        red2   = cv2.inRange(hsv, (170, 120,  70), (180, 255, 255))
-        red    = cv2.bitwise_or(red1, red2)
-        amber  = cv2.inRange(hsv, (10,  120,  70), (30,  255, 255))
-        green  = cv2.inRange(hsv, (40,   60,  70), (90,  255, 255))
-
-        counts = {
-            "RED":   cv2.countNonZero(red),
-            "AMBER": cv2.countNonZero(amber),
-            "GREEN": cv2.countNonZero(green),
-        }
-        best = max(counts, key=counts.get)
-        return best if counts[best] > 200 else "UNKNOWN"
-
+        roi_cfg = self._signal_roi
+        if roi_cfg:
+            x1, y1, x2, y2 = roi_cfg
+            x1, x2, y1, y2 = int(x1*w), int(x2*w), int(y1*h), int(y2*h)
+        else:
+            x1, x2, y1, y2 = w//4, 3*w//4, 0, h//3
+        x1, x2 = max(0,x1), min(w,x2); y1, y2 = max(0,y1), min(h,y2)
+        if x2 <= x1 or y2 <= y1:
+            self._signal_history.append("UNKNOWN"); self.state_confidence = 0.0; return "UNKNOWN"
+        roi = frame[y1:y2, x1:x2]; hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+        red1 = cv2.inRange(hsv, (0,100,90), (10,255,255))
+        red2 = cv2.inRange(hsv, (170,100,90), (180,255,255))
+        masks = {"RED": cv2.bitwise_or(red1,red2), "AMBER": cv2.inRange(hsv,(10,100,100),(30,255,255)), "GREEN": cv2.inRange(hsv,(40,70,70),(90,255,255))}
+        total = max(1, roi.shape[0]*roi.shape[1])
+        ratios = {name: cv2.countNonZero(mask)/total for name,mask in masks.items()}
+        ranked = sorted(ratios.items(), key=lambda item:item[1], reverse=True)
+        best, amount = ranked[0]; second = ranked[1][1]
+        raw = best if amount >= self._signal_min_ratio and amount-second >= self._signal_min_margin*amount else "UNKNOWN"
+        self._signal_history.append(raw)
+        valid = [state for state in self._signal_history if state != "UNKNOWN"]
+        if len(valid) < self._signal_min_samples:
+            self.state_confidence = 0.0; return "UNKNOWN"
+        from collections import Counter
+        state, count = Counter(valid).most_common(1)[0]
+        self.state_confidence = count / len(self._signal_history)
+        return state if self.state_confidence >= 0.70 else "UNKNOWN"
     # ------------------------------------------------------------------
     def _handle_violation(self, frame, info, timestamp):
         plate = info.get('plate', 'UNKNOWN')
