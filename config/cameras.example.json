@@ -1,6 +1,6 @@
 {
   "cameras": [
     {"camera_id":"CAM_FRONT","source":0,"role":"front","location_id":"junction-01","enabled":true,"width":1280,"height":720,"fps":15,"reconnect":true,"calibration":{"calibration_version":"junction-01-front-v1","jurisdiction":"TELANGANA","speed_limit_kmh":50,"wrong_way_direction":[0.0,1.0],"traffic_stop_line_y":0.70,"road_rule_zones":[],"road_rule_lines":[]}},
-    {"camera_id":"CAM_REAR","source":1,"role":"rear","location_id":"junction-01","enabled":true,"width":1280,"height":720,"fps":15,"reconnect":true,"calibration":{"calibration_version":"junction-01-rear-v1","jurisdiction":"TELANGANA","speed_limit_kmh":50,"wrong_way_direction":[0.0,-1.0],"traffic_stop_line_y":0.72}}
+    {"camera_id":"CAM_REAR","source":1,"role":"rear","location_id":"junction-01","enabled":true,"width":1280,"height":720,"fps":15,"reconnect":true,"calibration":{"calibration_version":"junction-01-rear-v1","jurisdiction":"TELANGANA","speed_limit_kmh":50,"wrong_way_direction":[0.0,-1.0],"traffic_stop_line_y":0.72,"indicator_detection":{"enabled":true,"active_ratio":0.035,"min_samples":5,"history_size":12}}}
   ]
 }
