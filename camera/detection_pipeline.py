@@ -68,6 +68,10 @@ class CameraDetectionPipeline:
         self.indicators = defaultdict(IndicatorDetector)
         calibration = getattr(config, "CAMERA_CALIBRATION", {}) or {}
         self.lane_polygons = tuple(calibration.get("lane_polygons", ()))
+        self._lane_centers = {
+            lane["lane_id"]: sum(point[0] for point in lane["polygon"]) / len(lane["polygon"])
+            for lane in self.lane_polygons
+        }
 
     @staticmethod
     def _inside_polygon(point, polygon):
@@ -143,7 +147,9 @@ class CameraDetectionPipeline:
             indicator_state = self._indicator_state(frame, track_id, info, timestamp)
             manoeuvre = None
             if transitions:
-                manoeuvre = "LEFT" if transitions[-1][2] < transitions[-1][1] else "RIGHT"
+                previous_lane, current_lane = transitions[-1][1], transitions[-1][2]
+                if previous_lane in self._lane_centers and current_lane in self._lane_centers:
+                    manoeuvre = "LEFT" if self._lane_centers[current_lane] < self._lane_centers[previous_lane] else "RIGHT"
             ttc = None
             if self.ttc_estimator is not None:
                 try:
