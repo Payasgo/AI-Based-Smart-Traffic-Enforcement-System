@@ -27,8 +27,8 @@ def _validate_calibration(cal):
         raise ValueError("calibration.line_distance_meters must be > 0")
     if "speed_calibration_verified" in cal and not isinstance(cal["speed_calibration_verified"], bool):
         raise ValueError("calibration.speed_calibration_verified must be a boolean")
-    if cal.get("speed_calibration_verified") and distance is None:
-        raise ValueError("verified speed calibration requires line_distance_meters")
+    if cal.get("speed_calibration_verified") and (distance is None or "speed_line_1_y" not in cal or "speed_line_2_y" not in cal or not cal.get("calibration_version")):
+        raise ValueError("verified speed calibration requires speed_line_1_y, speed_line_2_y, line_distance_meters and calibration_version")
     lane_polygons = cal.get("lane_polygons", [])
     if not isinstance(lane_polygons, list): raise ValueError("calibration.lane_polygons must be a list")
     seen_lane_ids = set()
