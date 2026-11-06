@@ -1,8 +1,4 @@
-"""Append-only operator review journal for evidence CSV events.
-
-Review decisions are stored separately from the camera event CSV. This avoids
-read/modify/replace races with camera workers appending new evidence records.
-"""
+"""Append-only operator review journal for evidence CSV events."""
 import csv
 import os
 import threading
@@ -12,8 +8,7 @@ from pathlib import Path
 from utils.evidence_file_lock import evidence_file_lock
 
 REVIEW_STATUSES = {"PENDING_REVIEW", "APPROVED", "REJECTED", "NEEDS_MORE_EVIDENCE"}
-REVIEW_FIELDS = ["review_id", "event_id", "review_status", "reviewed_by",
-                 "review_note", "reviewed_at_utc"]
+REVIEW_FIELDS = ["review_id", "event_id", "review_status", "reviewed_by", "review_note", "reviewed_at_utc"]
 
 
 class EvidenceReviewStore:
@@ -22,26 +17,34 @@ class EvidenceReviewStore:
         self.journal_path = self.csv_path.with_name("evidence_reviews.csv")
         self._lock = threading.RLock()
 
-    def _latest_decisions(self):
+    def _latest_decisions_unlocked(self):
         if not self.journal_path.exists():
             return {}
+        latest = {}
         with self.journal_path.open("r", newline="", encoding="utf-8-sig") as handle:
-            rows = csv.DictReader(handle)
-            latest = {}
-            for row in rows:
-                latest[row.get("event_id", "")] = row
-            return latest
+            for row in csv.DictReader(handle):
+                event_id = row.get("event_id", "")
+                if event_id:
+                    latest[event_id] = row
+        return latest
+
+    def latest_decisions(self):
+        # Journal readers and writers use the same OS-level lock. A reader can
+        # never observe a partially appended CSV record.
+        with self._lock, evidence_file_lock(self.journal_path):
+            return self._latest_decisions_unlocked()
 
     def list_events(self, status="PENDING_REVIEW", limit=100):
         if status not in REVIEW_STATUSES and status != "ALL":
             raise ValueError("Unsupported review status")
         limit = max(1, min(int(limit), 500))
-        with self._lock, evidence_file_lock(self.csv_path):
+        # Stable lock order prevents deadlocks: event log, then review journal.
+        with self._lock, evidence_file_lock(self.csv_path), evidence_file_lock(self.journal_path):
             if not self.csv_path.exists():
                 return []
             with self.csv_path.open("r", newline="", encoding="utf-8-sig") as handle:
                 rows = list(csv.DictReader(handle))
-            decisions = self._latest_decisions()
+            decisions = self._latest_decisions_unlocked()
         merged = []
         for row in rows:
             decision = decisions.get(row.get("event_id", ""))
@@ -69,9 +72,8 @@ class EvidenceReviewStore:
         note = str(note or "").strip()[:1000]
         if not reviewer:
             raise ValueError("reviewer is required")
-
         self.journal_path.parent.mkdir(parents=True, exist_ok=True)
-        with self._lock, evidence_file_lock(self.csv_path):
+        with self._lock, evidence_file_lock(self.csv_path), evidence_file_lock(self.journal_path):
             if not self.csv_path.exists():
                 raise KeyError("Evidence event not found")
             with self.csv_path.open("r", newline="", encoding="utf-8-sig") as handle:
@@ -81,7 +83,6 @@ class EvidenceReviewStore:
                 found = any(row.get("event_id") == str(event_id) for row in reader)
             if not found:
                 raise KeyError("Evidence event not found")
-
             journal_exists = self.journal_path.exists() and self.journal_path.stat().st_size > 0
             decision = {
                 "review_id": os.urandom(16).hex(),
