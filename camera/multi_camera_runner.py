@@ -41,7 +41,7 @@ class MultiCameraRunner:
         if camera_config is None:return config
         config.YOLO_MODEL_PATH=camera_config.model_path or config.YOLO_MODEL_PATH
         config.FRAME_WIDTH=camera_config.width;config.FRAME_HEIGHT=camera_config.height
-        config.CAMERA_ID=camera_config.camera_id;config.CAMERA_SITE_ID=camera_config.location_id
+        config.CAMERA_ID=camera_config.camera_id;config.CAMERA_SITE_ID=camera_config.location_id;config.CAMERA_ROLE=camera_config.role
         cal=camera_config.calibration or {}
         config.CAMERA_CALIBRATION=cal
         config.CALIBRATION_VERSION=cal.get("calibration_version","unversioned")
