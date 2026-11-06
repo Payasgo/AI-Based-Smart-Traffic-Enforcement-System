@@ -1,6 +1,7 @@
 """Coordinates capture, per-camera inference and detector suites."""
 import threading
 from camera.camera_manager import CameraManager
+from camera.camera_config import CameraConfig
 from camera.inference_worker import CameraInferenceWorker
 from detectors.vehicle_tracker import VehicleTracker
 
@@ -14,7 +15,12 @@ class MultiCameraRunner:
             from utils.alert_system import AlertSystem
             logger=EvidenceLogger(shared.LOG_DIR,shared.EVIDENCE_DIR);alerts=AlertSystem(shared)
         for camera_id,stream in camera_manager.streams.items():
-            config=self._camera_config(stream.config);tracker=tracker_factory(config);callback=None
+            # CameraStream exposes .config; lightweight test/custom streams may not.
+            # Fall back to a safe default config rather than crashing runner construction.
+            stream_config=getattr(stream, "config", None)
+            if stream_config is None:
+                stream_config=CameraConfig(camera_id=camera_id, source=getattr(stream, "source", 0))
+            config=self._camera_config(stream_config);tracker=tracker_factory(config);callback=None
             if enable_detection_pipeline:
                 if pipeline_factory is None:
                     from camera.detection_pipeline import CameraDetectionPipeline
