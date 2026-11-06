@@ -8,12 +8,12 @@ from detectors.vehicle_tracker import VehicleTracker
 
 class MultiCameraRunner:
     def __init__(self,camera_manager,tracker_factory=VehicleTracker,result_queue_size=2,enable_detection_pipeline=False,pipeline_factory=None):
-        self.camera_manager=camera_manager;self.workers={};self.pipelines={};self._stop=threading.Event()
+        self.camera_manager=camera_manager;self.workers={};self.pipelines={};self._stop=threading.Event();self.alert_system=None
         shared=self._camera_config(None)
         if enable_detection_pipeline:
             from utils.evidence_logger import EvidenceLogger
             from utils.alert_system import AlertSystem
-            logger=EvidenceLogger(shared.LOG_DIR,shared.EVIDENCE_DIR);alerts=AlertSystem(shared)
+            logger=EvidenceLogger(shared.LOG_DIR,shared.EVIDENCE_DIR);alerts=AlertSystem(shared);self.alert_system=alerts
         for camera_id,stream in camera_manager.streams.items():
             # CameraStream exposes .config; lightweight test/custom streams may not.
             # Fall back to a safe default config rather than crashing runner construction.
@@ -27,8 +27,10 @@ class MultiCameraRunner:
                     factory=CameraDetectionPipeline
                 else:factory=pipeline_factory
                 from camera.evidence_context import CameraEvidenceLogger
+                from camera.alert_context import CameraAlertContext
                 scoped=CameraEvidenceLogger(logger,camera_id,config.CAMERA_SITE_ID,config.CALIBRATION_VERSION)
-                pipeline=factory(config,scoped,alerts);self.pipelines[camera_id]=pipeline
+                camera_alerts=CameraAlertContext(alerts,camera_id,config.CAMERA_SITE_ID)
+                pipeline=factory(config,scoped,camera_alerts);self.pipelines[camera_id]=pipeline
                 callback=lambda result,p=pipeline:p.process(result.frame,result.tracked_vehicles,result.timestamp)
             self.workers[camera_id]=CameraInferenceWorker(camera_id,stream,tracker,result_queue_size=result_queue_size,on_result=callback)
 
@@ -73,7 +75,7 @@ class MultiCameraRunner:
 
     def health(self):
         states=self.camera_manager.health()
-        return {key:{**states[key],"inference_running":w.is_running,"processed_frames":w.processed_frames,"inference_error":w.last_error,"inference_error_count":w.error_count,"last_inference_error_at":w.last_error_at,"last_successful_inference_at":w.last_success_at,"last_sequence":w.last_sequence} for key,w in self.workers.items()}
+        return {key:{**states[key],"inference_running":w.is_running,"alerts":self.alert_system.health() if self.alert_system else {"enabled":False},"processed_frames":w.processed_frames,"inference_error":w.last_error,"inference_error_count":w.error_count,"last_inference_error_at":w.last_error_at,"last_successful_inference_at":w.last_success_at,"last_sequence":w.last_sequence} for key,w in self.workers.items()}
 
     def stop(self):
         errors=[]
@@ -82,4 +84,7 @@ class MultiCameraRunner:
             except Exception as exc:errors.append(str(exc))
         try:self.camera_manager.stop()
         except Exception as exc:errors.append(str(exc))
+        if self.alert_system:
+            try:self.alert_system.stop()
+            except Exception as exc:errors.append(str(exc))
         if errors:raise RuntimeError("; ".join(errors))
