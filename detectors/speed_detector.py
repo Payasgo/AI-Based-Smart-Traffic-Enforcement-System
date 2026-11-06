@@ -107,7 +107,7 @@ class SpeedDetector:
                             and speed > self.config.SPEED_LIMIT_KMH
                             and vid not in self._alerted):
                         self._alerted.add(vid)
-                        plate = self._estimate_plate(frame, info["bbox"])
+                        plate = info.get("plate", "UNKNOWN")
                         self._handle_violation(
                             frame, info, speed, plate, timestamp
                         )
