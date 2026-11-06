@@ -55,6 +55,39 @@ surveyed. Configure `WRONG_WAY_DIRECTION_X/Y` for the camera's permitted
 image-space direction. The wrong-way detector is a single-view motion check,
 not a GPS/map route classifier.
 
+### Speed calibration safety gate
+
+The virtual-line speed detector uses a measured physical distance between two
+road-plane lines. The default distance is a placeholder, not a valid site
+measurement. For every camera, configure these optional fields inside its
+`calibration` object:
+
+- `speed_line_1_y` and `speed_line_2_y`: normalized image heights (0..1)
+- `line_distance_meters`: physically measured distance between the lines
+- `speed_calibration_verified`: must remain `false` until the geometry and
+  speed output have been checked against a traceable reference instrument
+
+Example structure (replace values only after surveying the actual camera):
+
+```json
+{
+  "calibration": {
+    "speed_line_1_y": 0.35,
+    "speed_line_2_y": 0.65,
+    "line_distance_meters": 12.5,
+    "speed_calibration_verified": false
+  }
+}
+```
+
+With verification false (the default), the system may display an explicitly
+UNVERIFIED estimate for development, but it will not log or send a speeding
+enforcement alert. Set the flag to true only after documented site calibration
+and validation. This gate does not correct perspective distortion: a single
+pair of horizontal image lines can still produce location-dependent error on
+roads with significant perspective. A homography/road-plane calibration and
+field validation are still required before enforcement-grade use.
+
 ## Camera + live operation
 
 Use a live camera index or RTSP/video source supported by OpenCV. Enable the

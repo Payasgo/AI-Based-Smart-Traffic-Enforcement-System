@@ -12,10 +12,23 @@ def _point(value, name):
 def _validate_calibration(cal):
     if cal is None: return
     if not isinstance(cal, dict): raise ValueError("calibration must be an object")
-    allowed = {"speed_limit_kmh","wrong_way_direction","road_rule_zones","road_rule_lines","traffic_stop_line_y","calibration_version","jurisdiction"}
+    allowed = {"speed_limit_kmh","speed_line_1_y","speed_line_2_y","line_distance_meters","speed_calibration_verified","wrong_way_direction","road_rule_zones","road_rule_lines","traffic_stop_line_y","calibration_version","jurisdiction"}
     unknown = set(cal)-allowed
     if unknown: raise ValueError(f"unknown calibration keys: {', '.join(sorted(unknown))}")
     if "speed_limit_kmh" in cal and (not isinstance(cal["speed_limit_kmh"],(int,float)) or cal["speed_limit_kmh"]<=0): raise ValueError("calibration.speed_limit_kmh must be > 0")
+    for key in ("speed_line_1_y", "speed_line_2_y"):
+        value = cal.get(key)
+        if value is not None and (not isinstance(value, (int, float)) or not 0 <= value <= 1):
+            raise ValueError(f"calibration.{key} must be normalized to 0..1")
+    if "speed_line_1_y" in cal and "speed_line_2_y" in cal and cal["speed_line_1_y"] == cal["speed_line_2_y"]:
+        raise ValueError("speed measurement lines must be at different positions")
+    distance = cal.get("line_distance_meters")
+    if distance is not None and (not isinstance(distance, (int, float)) or distance <= 0):
+        raise ValueError("calibration.line_distance_meters must be > 0")
+    if "speed_calibration_verified" in cal and not isinstance(cal["speed_calibration_verified"], bool):
+        raise ValueError("calibration.speed_calibration_verified must be a boolean")
+    if cal.get("speed_calibration_verified") and distance is None:
+        raise ValueError("verified speed calibration requires line_distance_meters")
     direction=cal.get("wrong_way_direction")
     if direction is not None and (not isinstance(direction,(list,tuple)) or len(direction)!=2 or not all(isinstance(v,(int,float)) for v in direction) or (direction[0]==0 and direction[1]==0)): raise ValueError("calibration.wrong_way_direction must be a non-zero [x, y] vector")
     stop=cal.get("traffic_stop_line_y")

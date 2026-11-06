@@ -29,7 +29,8 @@ class Settings:
     SPEED_MEASUREMENT_FPS = 30
     SPEED_LINE_1_Y        = 0.4
     SPEED_LINE_2_Y        = 0.6
-    LINE_DISTANCE_METERS  = 10.0
+    LINE_DISTANCE_METERS  = 10.0  # Placeholder only; measure per camera before enforcement
+    SPEED_CALIBRATION_VERIFIED = False  # Fail closed: no speed alerts until calibration is verified
 
     # ── Wrong-way vehicle detection (configure per camera view) ───────
     # Unit vector for the permitted direction in image coordinates.
