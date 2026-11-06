@@ -28,10 +28,10 @@ class MultiCameraRunner:
                 else:factory=pipeline_factory
                 from camera.evidence_context import CameraEvidenceLogger
                 from camera.alert_context import CameraAlertContext
-                scoped=CameraEvidenceLogger(logger,camera_id,config.CAMERA_SITE_ID,config.CALIBRATION_VERSION)
+                scoped=CameraEvidenceLogger(logger,camera_id,config.CAMERA_SITE_ID,config.CALIBRATION_VERSION,config.YOLO_MODEL_PATH)
                 camera_alerts=CameraAlertContext(alerts,camera_id,config.CAMERA_SITE_ID)
                 pipeline=factory(config,scoped,camera_alerts);self.pipelines[camera_id]=pipeline
-                callback=lambda result,p=pipeline:p.process(result.frame,result.tracked_vehicles,result.timestamp)
+                callback=lambda result,p=pipeline:p.process(result.frame,result.tracked_vehicles,result.timestamp,frame_sequence=result.sequence)
             self.workers[camera_id]=CameraInferenceWorker(camera_id,stream,tracker,result_queue_size=result_queue_size,on_result=callback)
 
     @staticmethod
