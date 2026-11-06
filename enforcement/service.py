@@ -140,7 +140,7 @@ class EnforcementService:
         detected=parse_time(p["detected_at"])
         for k in ("vehicle_registration","camera_id","evidence_manifest_ref"):
             if not p.get(k): raise EnforcementError(f"{k} is required.")
-        verified=bool(p.get("driver_identity_verified")) and bool(p.get("person_ref"))
+        verified=bool(p.get("driver_identity_verified")) and bool(p.get("person_ref")) and bool(p.get("driver_identity_verification_ref"))
         result="UNVERIFIED_DRIVER"; matched=None
         with self.store.transaction() as c:
             if verified:
@@ -153,7 +153,7 @@ class EnforcementService:
             c.execute("INSERT INTO post_disqualification_detections VALUES(?,?,?,?,?,?,?,?,?,?,?)",
               (did,state,p.get("person_ref") if verified else None,p["vehicle_registration"].upper(),
                p["camera_id"],detected.isoformat(),p["evidence_manifest_ref"],int(verified),matched,result,now()))
-            self.audit(c,state,subject,role,"DISQUALIFIED_DRIVER_DETECTION","detection",did,{"result":result})
+            self.audit(c,state,subject,role,"DISQUALIFIED_DRIVER_DETECTION","detection",did,{"result":result,"identity_verification_ref":p.get("driver_identity_verification_ref") if verified else None})
         return {"detection_id":did,"result":result,"requires_officer_verification":True,"vehicle_seizure_authorised":False}
     def record_vehicle_detention(self,p,a):
         subject,role=self.require(a,POLICE_OFFICER,ENFORCEMENT_SUPERVISOR); state=self.state(p["jurisdiction"])
