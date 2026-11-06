@@ -18,6 +18,9 @@ class SpeedDetector:
         self.alert_system = alert_system
         self._tracks = {}
         self._alerted = set()
+        self.speed_calibration_verified = bool(
+            getattr(config, "SPEED_CALIBRATION_VERIFIED", False)
+        )
         self.track_timeout_seconds = float(
             getattr(config, "SPEED_TRACK_TIMEOUT_SECONDS", 5.0)
         )
@@ -90,7 +93,8 @@ class SpeedDetector:
                 speed = self._calculate_speed(vid)
                 if speed is not None:
                     self._annotate_speed(frame, info, speed)
-                    if (speed > self.config.SPEED_LIMIT_KMH
+                    if (self.speed_calibration_verified
+                            and speed > self.config.SPEED_LIMIT_KMH
                             and vid not in self._alerted):
                         self._alerted.add(vid)
                         plate = self._estimate_plate(frame, info["bbox"])
@@ -104,11 +108,13 @@ class SpeedDetector:
             if state["line2_time"] is not None:
                 speed = self._calculate_speed(vid)
                 if speed is not None:
-                    color = ((0, 0, 255) if speed > self.config.SPEED_LIMIT_KMH
-                             else (0, 255, 0))
+                    color = ((0, 165, 255) if not self.speed_calibration_verified
+                             else ((0, 0, 255) if speed > self.config.SPEED_LIMIT_KMH
+                                   else (0, 255, 0)))
                     x1, y1, _, _ = info["bbox"]
                     cv2.putText(
-                        frame, f"{speed:.1f} km/h", (x1, max(15, y1 - 20)),
+                        frame, (f"{speed:.1f} km/h" if self.speed_calibration_verified
+                                else f"UNVERIFIED ~{speed:.1f} km/h"), (x1, max(15, y1 - 20)),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.55, color, 2,
                     )
 
@@ -142,8 +148,9 @@ class SpeedDetector:
 
     def _annotate_speed(self, frame, info, speed):
         x1, y1, x2, y2 = info["bbox"]
-        color = ((0, 0, 255) if speed > self.config.SPEED_LIMIT_KMH
-                 else (0, 255, 0))
+        color = ((0, 165, 255) if not self.speed_calibration_verified
+                 else ((0, 0, 255) if speed > self.config.SPEED_LIMIT_KMH
+                       else (0, 255, 0)))
         cv2.rectangle(frame, (x1, y1), (x2, y2), color, 3)
 
     def _handle_violation(self, frame, info, speed, plate, timestamp):
