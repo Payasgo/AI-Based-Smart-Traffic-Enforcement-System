@@ -836,3 +836,22 @@ See [Multi-camera Benchmarking and Operator Evidence Review](docs/MULTICAMERA_BE
 
 
 Evidence review decisions are stored separately in an append-only journal. See [Evidence Review Journal](docs/EVIDENCE_REVIEW_JOURNAL.md).
+
+
+## Production-readiness implementation (Stages A–E)
+
+See [Production Readiness Implementation](docs/PRODUCTION_READINESS_IMPLEMENTATION.md) for evidence journal locking and reconciliation, event traceability, road-plane calibration utilities, camera-disjoint dataset validation, detector metrics, camera health signals and dashboard role configuration.
+
+Audit evidence without changing files:
+
+```powershell
+.venv\Scripts\python scripts/reconcile_evidence.py --log logs/violations.csv --evidence-dir evidence
+```
+
+For remote dashboard accounts, set `DASHBOARD_USERS_JSON` to a JSON object mapping usernames to password and role, for example:
+
+```powershell
+$env:DASHBOARD_USERS_JSON='{"admin":{"password":"replace-with-a-long-secret","role":"administrator"},"reviewer1":{"password":"replace-with-a-long-secret","role":"reviewer"},"auditor":{"password":"replace-with-a-long-secret","role":"readonly"}}'
+```
+
+Use unique strong secrets and HTTPS through a trusted reverse proxy. This basic-auth configuration is a starter access-control layer, not a substitute for an organization identity provider, MFA, secret vault or independent security assessment.
