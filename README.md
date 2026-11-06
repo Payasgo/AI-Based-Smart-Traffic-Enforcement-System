@@ -818,3 +818,8 @@ These documents distinguish implemented components from work that still needs
 calibration, validation, security review or operational approval. A passing CI
 run is not evidence of field accuracy or authorization for automatic traffic
 enforcement.
+
+
+## Turn-indicator visual baseline
+
+See [Indicator Vision Baseline](docs/INDICATOR_VISION_BASELINE.md) for the experimental rear-camera OpenCV indicator recognizer, per-camera configuration, tests and limitations. It is a heuristic baseline, not a trained model or enforcement-grade classifier.
