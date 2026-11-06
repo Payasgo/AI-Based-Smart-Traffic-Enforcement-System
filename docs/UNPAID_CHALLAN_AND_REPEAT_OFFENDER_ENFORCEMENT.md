@@ -14,7 +14,7 @@ Unpaid challans are surfaced for notice and authority review. A repeat-offender 
 4. An adjudicator records the official final disposition and explicitly marks whether it qualifies under the approved state policy.
 5. Count only finalised qualifying dispositions in a rolling policy window. The example default is five within 365 days, as a review/referral threshold only.
 6. A licensing authority records the official order, authority and effective dates. Revocation requires an official reference.
-7. A camera detection matches an active order only when driver identity has been independently verified.
+7. A camera detection matches an active order only when driver identity has been independently verified and a traceable verification reference is supplied.
 8. An authorised officer records any detention with legal basis, order and location; a release also requires an official reference.
 
 ## Roles
