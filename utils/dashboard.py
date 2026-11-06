@@ -46,6 +46,8 @@ except ImportError:
 class StatsCache:
     def __init__(self, csv_path: str, refresh_interval: float = 5.0):
         self.csv_path         = Path(csv_path)
+        from utils.evidence_review import EvidenceReviewStore
+        self.review_store = EvidenceReviewStore(self.csv_path)
         self.refresh_interval = refresh_interval
         self._lock            = threading.Lock()
         self._data            = self._empty_data()
@@ -87,6 +89,7 @@ class StatsCache:
                     rows.append(row)
             data = self._compute_plain(rows)
 
+        data["review_counts"] = self.review_store.review_summary()
         with self._lock:
             self._data = data
 
@@ -280,7 +283,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
   <div class="card"><h2>Top Repeat Offenders</h2><canvas id="chartPlates"></canvas></div>
   <div class="card wide">
     <h2>Evidence review queue</h2>
-    <p style="color:var(--muted);margin-bottom:10px">Review each event before enforcement action. Decisions are recorded in the evidence CSV.</p>
+    <p style="color:var(--muted);margin-bottom:10px">Review each event before enforcement action. Decisions are stored in the append-only evidence review journal.</p>
     <div id="review-list">Loading review queue…</div>
   </div>
   <div class="card wide">
@@ -418,9 +421,8 @@ async function fetchReviewQueue() {
       [["APPROVED","Approve"],["REJECTED","Reject"],["NEEDS_MORE_EVIDENCE","Needs evidence"]].forEach(([status,label]) => {
         const button = document.createElement("button"); button.textContent = label; button.style.cssText = "padding:7px 10px;cursor:pointer";
         button.addEventListener("click", async () => {
-          const reviewer = window.prompt("Reviewer identifier:"); if (!reviewer) return;
           const note = window.prompt("Review note (optional):") || "";
-          const result = await fetch("/api/review/" + encodeURIComponent(row.event_id), {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({status,reviewer,note})});
+          const result = await fetch("/api/review/" + encodeURIComponent(row.event_id), {method:"POST",headers:{"Content-Type":"application/json","X-Requested-With":"XMLHttpRequest"},body:JSON.stringify({status,note})});
           if (!result.ok) { const err = await result.json(); window.alert(err.error || "Could not save review"); return; }
           fetchReviewQueue();
         }); item.append(button);
@@ -464,22 +466,40 @@ def create_app(csv_path: str, refresh: float = 5.0, username=None, password=None
     app   = Flask(__name__)
     username = username if username is not None else os.getenv('DASHBOARD_USERNAME')
     password = password if password is not None else os.getenv('DASHBOARD_PASSWORD')
+    users_json = os.getenv('DASHBOARD_USERS_JSON', '').strip()
+    try:
+        users = json.loads(users_json) if users_json else {}
+    except json.JSONDecodeError as exc:
+        cache.stop()
+        raise RuntimeError('DASHBOARD_USERS_JSON must be valid JSON') from exc
+    if users and (not isinstance(users, dict) or any(not isinstance(v, dict) or not v.get('password') or v.get('role') not in {'administrator', 'reviewer', 'readonly'} for v in users.values())):
+        cache.stop()
+        raise RuntimeError('DASHBOARD_USERS_JSON entries require password and role administrator/reviewer/readonly')
     if bool(username) != bool(password):
         cache.stop()
         raise RuntimeError('Set both DASHBOARD_USERNAME and DASHBOARD_PASSWORD, or neither')
 
     @app.before_request
     def require_dashboard_auth():
-        if not username:
-            return None  # Localhost-only mode; main() prevents unsafe network binding.
         auth = request.authorization
         supplied_user = auth.username if auth else ''
         supplied_password = auth.password if auth else ''
-        user_ok = hmac.compare_digest(str(supplied_user), str(username))
-        password_ok = hmac.compare_digest(str(supplied_password), str(password))
-        if not (user_ok and password_ok):
+        if users:
+            account = users.get(supplied_user, {})
+            valid = bool(account) and hmac.compare_digest(str(supplied_password), str(account.get('password', '')))
+            role = account.get('role', 'readonly')
+        elif username:
+            valid = hmac.compare_digest(str(supplied_user), str(username)) and hmac.compare_digest(str(supplied_password), str(password))
+            role = os.getenv('DASHBOARD_ROLE', 'reviewer').strip().lower()
+        else:
+            valid = True
+            role = 'administrator'
+            supplied_user = 'local-operator'
+        if not valid:
             return Response('Authentication required', 401,
                             {'WWW-Authenticate': 'Basic realm="Traffic Dashboard"'})
+        request.environ['dashboard.user'] = supplied_user
+        request.environ['dashboard.role'] = role
         return None
 
     @app.route("/")
@@ -506,8 +526,19 @@ def create_app(csv_path: str, refresh: float = 5.0, username=None, password=None
     @app.route("/api/review/<event_id>", methods=["POST"])
     def api_review_event(event_id):
         payload = request.get_json(silent=True) or {}
+        if request.headers.get("X-Requested-With") != "XMLHttpRequest":
+            return jsonify({"error": "Missing same-origin request header"}), 403
+        origin = request.headers.get("Origin")
+        if origin:
+            from urllib.parse import urlsplit
+            if urlsplit(origin).netloc != request.host:
+                return jsonify({"error": "Cross-origin review request rejected"}), 403
+        reviewer = request.environ.get('dashboard.user', 'local-operator')
+        role = request.environ.get('dashboard.role', 'readonly')
+        if role not in {"administrator", "reviewer"}:
+            return jsonify({"error": "This account cannot review evidence"}), 403
         try:
-            row = review_store.update_status(event_id, payload.get("status"), payload.get("reviewer"), payload.get("note", ""))
+            row = review_store.update_status(event_id, payload.get("status"), reviewer, payload.get("note", ""))
             return jsonify(row)
         except KeyError as exc:
             return jsonify({"error": str(exc)}), 404
@@ -542,10 +573,11 @@ def main():
         loopback = args.host.lower() == 'localhost'
     has_user = bool(os.getenv('DASHBOARD_USERNAME'))
     has_password = bool(os.getenv('DASHBOARD_PASSWORD'))
+    has_users = bool(os.getenv('DASHBOARD_USERS_JSON'))
     if has_user != has_password:
         parser.error('Set both DASHBOARD_USERNAME and DASHBOARD_PASSWORD')
-    if not loopback and not (has_user and has_password):
-        parser.error('Non-loopback dashboard binding requires DASHBOARD_USERNAME and DASHBOARD_PASSWORD')
+    if not loopback and not ((has_user and has_password) or has_users):
+        parser.error('Non-loopback dashboard binding requires DASHBOARD_USERS_JSON or DASHBOARD_USERNAME and DASHBOARD_PASSWORD')
 
     print(f"[DASHBOARD] Starting on http://{args.host}:{args.port}")
     print(f"[DASHBOARD] Watching: {args.log}")

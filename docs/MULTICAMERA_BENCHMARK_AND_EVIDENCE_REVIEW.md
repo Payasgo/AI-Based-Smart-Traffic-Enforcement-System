@@ -8,20 +8,19 @@ Run from the project root after installing the Windows requirements:
 .venv\Scripts\python scripts\benchmark_multicamera.py --config config/cameras.example.json --warmup-seconds 30 --duration-seconds 300 --output benchmark-results\windows-multicamera.json
 ```
 
-Before running, edit the camera JSON to use the real camera sources and actual per-camera settings. Keep the same resolution, camera count and detection pipeline planned for deployment. The default benchmark enables the full per-camera detector pipeline. Use `--no-detection-pipeline` only to establish a capture/YOLO tracking baseline.
+Edit the camera JSON to use real camera sources and site-specific settings. Keep the planned resolution, camera count and full detection pipeline. Use `--no-detection-pipeline` only for a capture/tracking baseline.
 
-The JSON report records platform, processor, logical CPU count, Python version, per-camera processed frames/FPS, p50/p95 frame-to-result latency, worker errors, and (when `psutil` is installed) process CPU and peak resident memory. The script does not invent capacity estimates. Run repeated 5–15 minute trials under representative load and retain the reports to compare hardware/configuration changes.
-
-Benchmark output may contain machine details; keep it out of public commits unless you intend to publish them. The script writes to `benchmark-results/` by default only when that output path is selected.
+The report records per-camera consumer FPS, result-age percentiles, worker errors, CPU and peak RSS when psutil is installed. These are measurements on the host that ran the command, not guaranteed capacity. Repeat 5–15 minute trials under representative load and retain the reports privately because they can expose machine details.
 
 ## Stage 5 — Evidence review workflow
 
-The dashboard adds a pending evidence review queue and review API:
 - `GET /api/review?status=PENDING_REVIEW&limit=100`
-- `POST /api/review/<event_id>` with JSON `{"status":"APPROVED","reviewer":"operator-id","note":"..."}`
+- `POST /api/review/<event_id>` with JSON `{"status":"APPROVED","note":"..."}`
 - Allowed decisions: `APPROVED`, `REJECTED`, `NEEDS_MORE_EVIDENCE`.
-- `GET /api/review?status=ALL` lists all records.
+- `GET /api/review?status=ALL` lists events with their latest review decision.
 
-Review decisions are written back to the evidence CSV with reviewer and note fields. The existing dashboard authentication rules also protect these routes. Keep the dashboard bound to localhost unless both `DASHBOARD_USERNAME` and `DASHBOARD_PASSWORD` are configured. Use a trusted network and HTTPS/reverse proxy before remote operational use.
+Camera events are append-only in `logs/violations.csv`. Operator decisions are appended separately to `logs/evidence_reviews.csv`; the latest decision per event is joined when the queue is read. The two files form one logical audit record and must be backed up and restored together. Do not edit either file while the application is running.
 
-Approval means an operator marked evidence for further handling; it does not issue a challan, prove legal admissibility, or submit to a government portal. Human verification of plate, timestamp, camera/site, calibration, image integrity and applicable local law remains required.
+The dashboard authenticates using HTTP Basic credentials. A reviewer's identity is taken from the authenticated account, not from a caller-supplied reviewer field. Keep the dashboard bound to localhost unless credentials are configured, and use HTTPS through a trusted reverse proxy before remote operational use.
+
+Approval is an operator workflow state. It does not issue a challan, prove legal admissibility, or submit to a government portal. Human verification of plate, timestamp, camera/site, calibration, image integrity and applicable law remains mandatory.

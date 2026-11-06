@@ -17,7 +17,7 @@ class CameraInferenceWorker:
         self.clock=clock or (lambda:datetime.now(timezone.utc)); self.on_result=on_result
         self.results=queue.Queue(maxsize=result_queue_size); self._stop=threading.Event(); self._thread=None
         self.last_error=None; self.error_count=0; self.last_error_at=None
-        self.processed_frames=0; self.last_success_at=None; self.last_sequence=None
+        self.processed_frames=0; self.last_success_at=None; self.last_sequence=None; self.last_frame_received_at=None; self.result_queue_drops=0
     @property
     def is_running(self): return self._thread is not None and self._thread.is_alive()
     def start(self):
@@ -36,6 +36,7 @@ class CameraInferenceWorker:
     def _publish(self,item):
         try:self.results.put_nowait(item)
         except queue.Full:
+            self.result_queue_drops += 1
             try:self.results.get_nowait()
             except queue.Empty:pass
             try:self.results.put_nowait(item)
@@ -45,6 +46,7 @@ class CameraInferenceWorker:
             try:
                 packet=self.stream.read(timeout=0.2)
                 if packet is None:continue
+                self.last_frame_received_at=self.clock().isoformat()
                 tracks=self.tracker.update(packet.frame,packet.timestamp)
                 result=InferenceResult(self.camera_id,packet.timestamp or self.clock(),packet.frame,tracks,packet.sequence)
                 if self.on_result is not None:self.on_result(result)

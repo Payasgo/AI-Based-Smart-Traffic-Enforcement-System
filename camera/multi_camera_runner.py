@@ -28,10 +28,10 @@ class MultiCameraRunner:
                 else:factory=pipeline_factory
                 from camera.evidence_context import CameraEvidenceLogger
                 from camera.alert_context import CameraAlertContext
-                scoped=CameraEvidenceLogger(logger,camera_id,config.CAMERA_SITE_ID,config.CALIBRATION_VERSION)
+                scoped=CameraEvidenceLogger(logger,camera_id,config.CAMERA_SITE_ID,config.CALIBRATION_VERSION,config.YOLO_MODEL_PATH)
                 camera_alerts=CameraAlertContext(alerts,camera_id,config.CAMERA_SITE_ID)
                 pipeline=factory(config,scoped,camera_alerts);self.pipelines[camera_id]=pipeline
-                callback=lambda result,p=pipeline:p.process(result.frame,result.tracked_vehicles,result.timestamp)
+                callback=lambda result,p=pipeline:p.process(result.frame,result.tracked_vehicles,result.timestamp,frame_sequence=result.sequence)
             self.workers[camera_id]=CameraInferenceWorker(camera_id,stream,tracker,result_queue_size=result_queue_size,on_result=callback)
 
     @staticmethod
@@ -81,7 +81,7 @@ class MultiCameraRunner:
 
     def health(self):
         states=self.camera_manager.health()
-        return {key:{**states[key],"inference_running":w.is_running,"alerts":self.alert_system.health() if self.alert_system else {"enabled":False},"processed_frames":w.processed_frames,"inference_error":w.last_error,"inference_error_count":w.error_count,"last_inference_error_at":w.last_error_at,"last_successful_inference_at":w.last_success_at,"last_sequence":w.last_sequence} for key,w in self.workers.items()}
+        return {key:{**states[key],"inference_running":w.is_running,"alerts":self.alert_system.health() if self.alert_system else {"enabled":False},"processed_frames":w.processed_frames,"inference_error":w.last_error,"inference_error_count":w.error_count,"last_inference_error_at":w.last_error_at,"last_successful_inference_at":w.last_success_at,"last_sequence":w.last_sequence,"last_frame_received_at":w.last_frame_received_at,"result_queue_drops":w.result_queue_drops} for key,w in self.workers.items()}
 
     def stop(self):
         errors=[]
