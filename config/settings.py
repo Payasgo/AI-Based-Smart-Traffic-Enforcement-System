@@ -6,6 +6,16 @@ Adjust these values to match your deployment environment.
 import os
 
 
+
+
+def _traffic_jurisdiction():
+    value = os.getenv("TRAFFIC_JURISDICTION", "TELANGANA").strip().upper()
+    supported = {"ANDHRA_PRADESH", "TELANGANA"}
+    if value not in supported:
+        raise ValueError(f"Unsupported TRAFFIC_JURISDICTION={value!r}; choose ANDHRA_PRADESH or TELANGANA")
+    return value
+
+
 class Settings:
     # ── Video / Camera ──────────────────────────────────────────────
     VIDEO_SOURCE = 0                    # 0 = default webcam; or path to video file
@@ -33,7 +43,7 @@ class Settings:
     # ── State / UT deployment profile ───────────────────────────────
     # Set TRAFFIC_JURISDICTION=ANDHRA_PRADESH or TELANGANA per camera/site.
     # Do not infer jurisdiction from a vehicle registration prefix.
-    TRAFFIC_JURISDICTION = os.getenv("TRAFFIC_JURISDICTION", "TELANGANA").upper()
+    TRAFFIC_JURISDICTION = _traffic_jurisdiction()
     SUPPORTED_JURISDICTIONS = {
         "ANDHRA_PRADESH": {
             "state_name": "Andhra Pradesh",
@@ -58,7 +68,6 @@ class Settings:
     #  "violation_type":"SOLID_LINE_CROSSING","direction":"either"}
     ROAD_RULE_LINES = []
     PARKING_STATIONARY_PIXELS = 5.0
-    TRAFFIC_JURISDICTION = "IN"  # Configure the applicable state/UT at deployment.
     # Populate only after the relevant state/UT fine schedule is verified.
     FINE_SCHEDULE_INR = {}
 
