@@ -745,17 +745,23 @@ If any test fails, check that you are running inside the `venv` environment and 
 
 ---
 
-## Hardware requirements
+## Hardware requirements — real-time roadside deployment
 
-| Component | Minimum | Recommended |
-|-----------|---------|-------------|
-| Camera | 1 × 1080p, 30 FPS | Multiple 1080p+ cameras for 3-D lane triangulation |
-| Microphone | Any USB mic, 16 kHz | Directional or array mic for accurate vehicle source location |
-| CPU | Intel i7 / AMD Ryzen 7 | Same or better |
-| GPU | None (CPU-only, ~5 FPS) | NVIDIA RTX series — real-time 30+ FPS YOLOv8 inference |
-| RAM | 8 GB | 16 GB+ |
-| Storage | 20 GB free | 100 GB+ for long-term evidence archive |
-| Internet | Not required | Required only for REST alert integration |
+The compact table below is only a quick overview. For an 8-camera, 24/7 roadside installation, use the detailed [Real-Time Hardware Requirements and Deployment Guide](docs/HARDWARE_REQUIREMENTS_REALTIME.md), including the architecture image, workstation, dedicated ANPR cameras, PoE/network, storage, UPS, site protection and commissioning acceptance checklist.
+
+![Real-time roadside hardware architecture](assets/realtime-roadside-hardware-architecture.svg)
+
+| Component | Development / pilot | High-quality 5–8 camera deployment target |
+|-----------|---------------------|--------------------------------------------|
+| Cameras | USB webcam / RTSP test camera | 4K/8MP wired PoE outdoor cameras; dedicated optical-zoom ANPR/LPR views; suitable IR, WDR and fast shutter |
+| Inference workstation | Existing PC for functional testing | Workstation-class CPU, NVIDIA 32 GB VRAM class GPU, 128 GB RAM, 2 TB NVMe, 10 GbE |
+| Network | Single camera connection | Managed 16-port PoE+/PoE++ switch with calculated power headroom, camera VLAN and 10 GbE/fibre uplink |
+| Storage | Local SSD for tests | Enterprise/NAS storage sized to bitrate and retention, RAID plus independent backup |
+| Power | Standard protected supply | Online UPS sized from measured load, surge protection, proper earthing and weather-rated cabinet |
+| Mounting | Tripod / temporary mount | Surveyed rigid poles/brackets, weatherproof cable routes and professional installation |
+| Audio (optional) | USB microphone | Outdoor directional microphone or array, wind protection and site noise survey |
+
+**Important:** the high-quality target is not a guarantee of a particular FPS or ANPR accuracy. Measure the exact workload and camera/lens combination on representative footage before procurement. A successful webcam startup is not a production-readiness test. The detailed guide explains the reference architecture, procurement tiers, storage sizing, commissioning tests and current software limitations. The earlier ₹2–5 lakh planning envelope should be treated as a constrained pilot budget, not a no-compromise 8-camera production build.
 
 ---
 
