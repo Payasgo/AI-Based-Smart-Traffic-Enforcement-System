@@ -17,6 +17,9 @@ Dependencies (added to requirements.txt):
 
 import argparse
 import json
+import hmac
+import ipaddress
+import os
 import threading
 import time
 from datetime import datetime, timedelta
@@ -30,7 +33,7 @@ except ImportError:
     HAS_PANDAS = False
 
 try:
-    from flask import Flask, jsonify, render_template_string, request
+    from flask import Flask, jsonify, render_template_string, request, Response
     HAS_FLASK = True
 except ImportError:
     HAS_FLASK = False
@@ -371,8 +374,19 @@ function updateCharts(d) {
   d.recent.forEach(r => {
     const tr = document.createElement('tr');
     const badge = `<span class="badge ${r.violation_type}">${r.violation_type}</span>`;
-    tr.innerHTML = `<td>${r.timestamp}</td><td>${badge}</td>
-                    <td>${r.license_plate}</td><td>${r.speed_kmh || '–'}</td>`;
+    const cells = [r.timestamp, r.violation_type, r.license_plate, r.speed_kmh || '–'];
+    cells.forEach((value, index) => {
+      const td = document.createElement('td');
+      if (index === 1) {
+        const badge = document.createElement('span');
+        badge.className = 'badge';
+        badge.textContent = String(value ?? '');
+        td.appendChild(badge);
+      } else {
+        td.textContent = String(value ?? '');
+      }
+      tr.appendChild(td);
+    });
     tbody.appendChild(tr);
   });
 }
@@ -399,12 +413,31 @@ setInterval(fetchStats, 5000);
 # Flask app factory
 # ─────────────────────────────────────────────────────────────────────────────
 
-def create_app(csv_path: str, refresh: float = 5.0):
+def create_app(csv_path: str, refresh: float = 5.0, username=None, password=None):
     if not HAS_FLASK:
         raise RuntimeError("Flask is not installed.  Run: pip install flask")
 
     cache = StatsCache(csv_path, refresh)
     app   = Flask(__name__)
+    username = username if username is not None else os.getenv('DASHBOARD_USERNAME')
+    password = password if password is not None else os.getenv('DASHBOARD_PASSWORD')
+    if bool(username) != bool(password):
+        cache.stop()
+        raise RuntimeError('Set both DASHBOARD_USERNAME and DASHBOARD_PASSWORD, or neither')
+
+    @app.before_request
+    def require_dashboard_auth():
+        if not username:
+            return None  # Localhost-only mode; main() prevents unsafe network binding.
+        auth = request.authorization
+        supplied_user = auth.username if auth else ''
+        supplied_password = auth.password if auth else ''
+        user_ok = hmac.compare_digest(str(supplied_user), str(username))
+        password_ok = hmac.compare_digest(str(supplied_password), str(password))
+        if not (user_ok and password_ok):
+            return Response('Authentication required', 401,
+                            {'WWW-Authenticate': 'Basic realm="Traffic Dashboard"'})
+        return None
 
     @app.route("/")
     def index():
@@ -431,11 +464,24 @@ def main():
     parser.add_argument("--log",     default="logs/violations.csv",
                         help="Path to violations CSV")
     parser.add_argument("--port",    type=int, default=5000)
-    parser.add_argument("--host",    default="0.0.0.0")
+    parser.add_argument("--host",    default="127.0.0.1",
+                        help="Bind address; non-loopback access requires DASHBOARD_USERNAME and DASHBOARD_PASSWORD")
     parser.add_argument("--refresh", type=float, default=5.0,
                         help="Stats cache refresh interval in seconds")
     parser.add_argument("--debug",   action="store_true")
     args = parser.parse_args()
+
+    try:
+        bind_ip = ipaddress.ip_address(args.host)
+        loopback = bind_ip.is_loopback
+    except ValueError:
+        loopback = args.host.lower() == 'localhost'
+    has_user = bool(os.getenv('DASHBOARD_USERNAME'))
+    has_password = bool(os.getenv('DASHBOARD_PASSWORD'))
+    if has_user != has_password:
+        parser.error('Set both DASHBOARD_USERNAME and DASHBOARD_PASSWORD')
+    if not loopback and not (has_user and has_password):
+        parser.error('Non-loopback dashboard binding requires DASHBOARD_USERNAME and DASHBOARD_PASSWORD')
 
     print(f"[DASHBOARD] Starting on http://{args.host}:{args.port}")
     print(f"[DASHBOARD] Watching: {args.log}")
