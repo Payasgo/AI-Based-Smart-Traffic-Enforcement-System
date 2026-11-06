@@ -53,7 +53,7 @@ class EnforcementService:
         if due<=issued or amount<0: raise EnforcementError("Invalid due date or amount.")
         cid=str(p.get("challan_id") or new_id())
         with self.store.transaction() as c:
-            c.execute("INSERT INTO challans VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            c.execute("INSERT INTO challans VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
               (cid,state,p["vehicle_registration"].upper(),p.get("responsible_person_ref"),p["offence_type"],
                issued.isoformat(),due.isoformat(),amount,0,"ISSUED",p.get("source_event_id"),now()))
             self.audit(c,state,subject,role,"CHALLAN_CREATED","challan",cid,{})
