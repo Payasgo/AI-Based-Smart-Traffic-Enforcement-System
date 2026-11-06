@@ -34,6 +34,22 @@ class EvidenceReviewStore:
         with self._lock, evidence_file_lock(self.journal_path):
             return self._latest_decisions_unlocked()
 
+    def review_summary(self):
+        counts = {status: 0 for status in REVIEW_STATUSES}
+        with self._lock, evidence_file_lock(self.csv_path), evidence_file_lock(self.journal_path):
+            if not self.csv_path.exists():
+                return counts
+            with self.csv_path.open("r", newline="", encoding="utf-8-sig") as handle:
+                events = list(csv.DictReader(handle))
+            decisions = self._latest_decisions_unlocked()
+        for event in events:
+            decision = decisions.get(event.get("event_id", ""))
+            status = decision.get("review_status") if decision else event.get("review_status")
+            status = status or "PENDING_REVIEW"
+            if status in counts:
+                counts[status] += 1
+        return counts
+
     def list_events(self, status="PENDING_REVIEW", limit=100):
         if status not in REVIEW_STATUSES and status != "ALL":
             raise ValueError("Unsupported review status")
