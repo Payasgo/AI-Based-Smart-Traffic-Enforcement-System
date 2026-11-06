@@ -3,7 +3,7 @@ import csv, hashlib, os, threading, uuid
 from datetime import datetime, timezone
 from pathlib import Path
 import cv2
-FIELDNAMES=["event_id","timestamp","camera_id","site_id","calibration_version","violation_type","license_plate","speed_kmh","evidence_image","evidence_sha256","location","review_status"]
+FIELDNAMES=["event_id","timestamp","camera_id","site_id","calibration_version","violation_type","license_plate","speed_kmh","evidence_image","evidence_sha256","location","review_status","reviewed_by","review_note"]
 
 class EvidenceLogger:
     def __init__(self,log_dir="logs",evidence_dir="evidence"):
