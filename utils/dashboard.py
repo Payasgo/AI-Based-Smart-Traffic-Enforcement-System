@@ -421,7 +421,6 @@ async function fetchReviewQueue() {
       [["APPROVED","Approve"],["REJECTED","Reject"],["NEEDS_MORE_EVIDENCE","Needs evidence"]].forEach(([status,label]) => {
         const button = document.createElement("button"); button.textContent = label; button.style.cssText = "padding:7px 10px;cursor:pointer";
         button.addEventListener("click", async () => {
-          const reviewer = window.prompt("Reviewer identifier:"); if (!reviewer) return;
           const note = window.prompt("Review note (optional):") || "";
           const result = await fetch("/api/review/" + encodeURIComponent(row.event_id), {method:"POST",headers:{"Content-Type":"application/json","X-Requested-With":"XMLHttpRequest"},body:JSON.stringify({status,note})});
           if (!result.ok) { const err = await result.json(); window.alert(err.error || "Could not save review"); return; }
