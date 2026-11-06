@@ -865,3 +865,10 @@ $env:DASHBOARD_USERS_JSON='{"admin":{"password":"replace-with-a-long-secret","ro
 ```
 
 Use unique strong secrets and HTTPS through a trusted reverse proxy. This basic-auth configuration is a starter access-control layer, not a substitute for an organization identity provider, MFA, secret vault or independent security assessment.
+
+
+## Unpaid challan and repeat-offender enforcement
+
+The repository now has a proposed enforcement workflow for challan payment/dispute tracking, overdue challan review, authority-finalised repeat-offender referrals, official licence suspension/disqualification records, verified post-disqualification detection alerts, and officer-authorised vehicle detention/release records.
+
+See [module documentation](docs/UNPAID_CHALLAN_AND_REPEAT_OFFENDER_ENFORCEMENT.md) and [disabled-by-default example policy](config/enforcement_policy.example.json). This is an administrative software foundation only: it does not automatically suspend licences, issue government challans, infer the driver from a number plate, or seize/immobilise vehicles. Production requires government-authorised integrations, approved state policy, identity/access controls, PostgreSQL deployment, legal review and field acceptance.
