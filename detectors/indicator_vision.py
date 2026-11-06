@@ -97,3 +97,5 @@ class AmberIndicatorVision:
             "right_probability": right_probability if visible else None,
             "visible": visible,
         }
+
+    __call__ = predict
