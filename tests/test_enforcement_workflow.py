@@ -47,7 +47,7 @@ def test_verified_driver_match_is_alert_not_seizure(svc):
       "valid_from":ts(datetime.now(timezone.utc)-timedelta(days=1))},LIC)
     result=svc.record_post_disqualification_detection({"jurisdiction":"ANDHRA_PRADESH","person_ref":"P-2",
       "vehicle_registration":"AP01CD5678","camera_id":"AP-CAM-1","detected_at":ts(datetime.now(timezone.utc)),
-      "evidence_manifest_ref":"manifest://2","driver_identity_verified":True},POLICE)
+      "evidence_manifest_ref":"manifest://2","driver_identity_verified":True,"driver_identity_verification_ref":"POLICE-IDENTITY-CHECK-2026-001"},POLICE)
     assert result["result"]=="ACTIVE_ORDER_MATCH" and result["vehicle_seizure_authorised"] is False
 def test_detention_requires_police_and_order(svc):
     payload={"jurisdiction":"TELANGANA","vehicle_registration":"TS09AB1234","legal_basis_ref":"SECTION-REF",
