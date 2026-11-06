@@ -46,6 +46,8 @@ except ImportError:
 class StatsCache:
     def __init__(self, csv_path: str, refresh_interval: float = 5.0):
         self.csv_path         = Path(csv_path)
+        from utils.evidence_review import EvidenceReviewStore
+        self.review_store = EvidenceReviewStore(self.csv_path)
         self.refresh_interval = refresh_interval
         self._lock            = threading.Lock()
         self._data            = self._empty_data()
@@ -87,6 +89,7 @@ class StatsCache:
                     rows.append(row)
             data = self._compute_plain(rows)
 
+        data["review_counts"] = self.review_store.review_summary()
         with self._lock:
             self._data = data
 
@@ -280,7 +283,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
   <div class="card"><h2>Top Repeat Offenders</h2><canvas id="chartPlates"></canvas></div>
   <div class="card wide">
     <h2>Evidence review queue</h2>
-    <p style="color:var(--muted);margin-bottom:10px">Review each event before enforcement action. Decisions are recorded in the evidence CSV.</p>
+    <p style="color:var(--muted);margin-bottom:10px">Review each event before enforcement action. Decisions are stored in the append-only evidence review journal.</p>
     <div id="review-list">Loading review queue…</div>
   </div>
   <div class="card wide">
@@ -420,7 +423,7 @@ async function fetchReviewQueue() {
         button.addEventListener("click", async () => {
           const reviewer = window.prompt("Reviewer identifier:"); if (!reviewer) return;
           const note = window.prompt("Review note (optional):") || "";
-          const result = await fetch("/api/review/" + encodeURIComponent(row.event_id), {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({status,reviewer,note})});
+          const result = await fetch("/api/review/" + encodeURIComponent(row.event_id), {method:"POST",headers:{"Content-Type":"application/json","X-Requested-With":"XMLHttpRequest"},body:JSON.stringify({status,note})});
           if (!result.ok) { const err = await result.json(); window.alert(err.error || "Could not save review"); return; }
           fetchReviewQueue();
         }); item.append(button);
@@ -506,8 +509,20 @@ def create_app(csv_path: str, refresh: float = 5.0, username=None, password=None
     @app.route("/api/review/<event_id>", methods=["POST"])
     def api_review_event(event_id):
         payload = request.get_json(silent=True) or {}
+        if request.headers.get("X-Requested-With") != "XMLHttpRequest":
+            return jsonify({"error": "Missing same-origin request header"}), 403
+        origin = request.headers.get("Origin")
+        if origin:
+            from urllib.parse import urlsplit
+            if urlsplit(origin).netloc != request.host:
+                return jsonify({"error": "Cross-origin review request rejected"}), 403
+        auth = request.authorization
+        reviewer = auth.username if auth else "local-operator"
+        role = os.getenv("DASHBOARD_ROLE", "reviewer").strip().lower()
+        if role not in {"administrator", "reviewer"}:
+            return jsonify({"error": "This account cannot review evidence"}), 403
         try:
-            row = review_store.update_status(event_id, payload.get("status"), payload.get("reviewer"), payload.get("note", ""))
+            row = review_store.update_status(event_id, payload.get("status"), reviewer, payload.get("note", ""))
             return jsonify(row)
         except KeyError as exc:
             return jsonify({"error": str(exc)}), 404
