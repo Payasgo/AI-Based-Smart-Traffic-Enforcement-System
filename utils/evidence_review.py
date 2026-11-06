@@ -38,7 +38,8 @@ class EvidenceReviewStore:
         note = str(note or "").strip()[:1000]
         if not reviewer:
             raise ValueError("reviewer is required")
-        with self._lock:
+        # Serialize the full read-modify-replace operation with camera CSV appends.
+        with self._lock, evidence_file_lock(self.csv_path):
             if not self.csv_path.exists():
                 raise KeyError("Evidence event not found")
             with self.csv_path.open("r", newline="", encoding="utf-8-sig") as handle:
