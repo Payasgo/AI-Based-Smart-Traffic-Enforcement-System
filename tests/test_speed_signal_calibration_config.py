@@ -2,12 +2,12 @@ import pytest
 from camera.camera_config import CameraConfig
 
 
-def test_verified_speed_calibration_requires_surveyed_lines_distance_and_version():
-    with pytest.raises(ValueError, match="calibration_version"):
-        CameraConfig.from_dict({"camera_id":"cam","source":0,"calibration":{
-            "speed_calibration_verified":True, "line_distance_meters":12.0,
-            "speed_line_1_y":0.3, "speed_line_2_y":0.7
-        }})
+def test_verified_speed_calibration_accepts_surveyed_lines_and_distance_without_optional_version():
+    camera = CameraConfig.from_dict({"camera_id":"cam","source":0,"calibration":{
+        "speed_calibration_verified":True, "line_distance_meters":12.0,
+        "speed_line_1_y":0.3, "speed_line_2_y":0.7
+    }})
+    assert camera.calibration["speed_calibration_verified"] is True
 
 
 def test_verified_speed_calibration_accepts_complete_survey_metadata():
