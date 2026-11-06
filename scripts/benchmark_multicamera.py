@@ -70,10 +70,10 @@ def run_benchmark(config, duration_seconds=60, warmup_seconds=10, enable_detecti
     for camera_id in sorted(runner.workers):
         values = latencies_ms[camera_id]
         cameras[camera_id] = {
-            "frames_processed": counts[camera_id],
-            "measured_fps": round(counts[camera_id] / actual_seconds, 3),
-            "latency_ms_p50": percentile(values, 0.50),
-            "latency_ms_p95": percentile(values, 0.95),
+            "results_received_by_benchmark_consumer": counts[camera_id],
+            "consumer_received_fps": round(counts[camera_id] / actual_seconds, 3),
+            "result_age_ms_p50": percentile(values, 0.50),
+            "result_age_ms_p95": percentile(values, 0.95),
             "worker_processed_frames_total": health[camera_id].get("processed_frames"),
             "worker_error_count": health[camera_id].get("inference_error_count"),
             "last_inference_error": health[camera_id].get("inference_error"),
